@@ -265,6 +265,20 @@ textarea {
     font-size: 0.75rem;
 }
 
+.task-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.task-summary-item {
+    padding: 4px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
 .empty-state {
     color: var(--text-muted);
     font-size: 0.875rem;

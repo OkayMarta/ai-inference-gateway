@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 
 function normalizeList(value) {
@@ -45,6 +45,10 @@ function getTaskResult(task) {
     return "Task is still being processed.";
 }
 
+function countTasksByStatus(tasks, status) {
+    return tasks.filter((task) => task.status === status).length;
+}
+
 export default function Dashboard() {
     const [users, setUsers] = useState([]);
     const [models, setModels] = useState([]);
@@ -54,29 +58,95 @@ export default function Dashboard() {
     const [selectedModel, setSelectedModel] = useState("");
     const [prompt, setPrompt] = useState("");
 
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
+    const [bootLoading, setBootLoading] = useState(true);
+    const [taskLoading, setTaskLoading] = useState(false);
+    const [submitLoading, setSubmitLoading] = useState(false);
+    const [screenError, setScreenError] = useState("");
+    const [submitError, setSubmitError] = useState("");
+    const [submitSuccess, setSubmitSuccess] = useState("");
+
+    const currentUser = useMemo(
+        () => users.find((user) => user.id === selectedUser) || null,
+        [users, selectedUser],
+    );
+
+    const currentModel = useMemo(
+        () => models.find((model) => model.id === selectedModel) || null,
+        [models, selectedModel],
+    );
+
+    const sortedTasks = useMemo(
+        () =>
+            normalizeList(tasks).sort(
+                (left, right) =>
+                    new Date(right.createdAt) - new Date(left.createdAt),
+            ),
+        [tasks],
+    );
+
+    const queuedCount = useMemo(
+        () => countTasksByStatus(sortedTasks, "Queued"),
+        [sortedTasks],
+    );
+    const processingCount = useMemo(
+        () => countTasksByStatus(sortedTasks, "Processing"),
+        [sortedTasks],
+    );
+    const completedCount = useMemo(
+        () => countTasksByStatus(sortedTasks, "Completed"),
+        [sortedTasks],
+    );
 
     useEffect(() => {
-        api.getUsers()
-            .then((data) => setUsers(normalizeList(data)))
-            .catch((err) => setError(err.message));
-        api.getModels()
-            .then((data) => setModels(normalizeList(data)))
-            .catch((err) => setError(err.message));
+        let active = true;
+
+        const loadBootData = async () => {
+            setBootLoading(true);
+            setScreenError("");
+
+            try {
+                const [nextUsers, nextModels] = await Promise.all([
+                    api.getUsers(),
+                    api.getModels(),
+                ]);
+
+                if (!active) {
+                    return;
+                }
+
+                setUsers(normalizeList(nextUsers));
+                setModels(normalizeList(nextModels));
+            } catch (error) {
+                if (active) {
+                    setScreenError(error.message);
+                }
+            } finally {
+                if (active) {
+                    setBootLoading(false);
+                }
+            }
+        };
+
+        loadBootData();
+
+        return () => {
+            active = false;
+        };
     }, []);
 
     useEffect(() => {
         if (!selectedUser) {
             setTasks([]);
-            setSuccess("");
+            setTaskLoading(false);
             return;
         }
 
         let active = true;
 
-        const fetchTasks = async () => {
+        const refreshUserData = async () => {
+            setTaskLoading(true);
+            setScreenError("");
+
             try {
                 const [nextTasks, nextUsers] = await Promise.all([
                     api.getTasks(selectedUser),
@@ -89,15 +159,19 @@ export default function Dashboard() {
 
                 setTasks(normalizeList(nextTasks));
                 setUsers(normalizeList(nextUsers));
-            } catch (err) {
+            } catch (error) {
                 if (active) {
-                    setError(err.message);
+                    setScreenError(error.message);
+                }
+            } finally {
+                if (active) {
+                    setTaskLoading(false);
                 }
             }
         };
 
-        fetchTasks();
-        const intervalId = setInterval(fetchTasks, 2000);
+        refreshUserData();
+        const intervalId = setInterval(refreshUserData, 2000);
 
         return () => {
             active = false;
@@ -105,35 +179,60 @@ export default function Dashboard() {
         };
     }, [selectedUser]);
 
+    const handleUserChange = (event) => {
+        setSelectedUser(event.target.value);
+        setSubmitError("");
+        setSubmitSuccess("");
+        setScreenError("");
+    };
+
+    const handleModelChange = (event) => {
+        setSelectedModel(event.target.value);
+        setSubmitError("");
+        setSubmitSuccess("");
+    };
+
     const handleSubmit = async (event) => {
         event.preventDefault();
         if (!selectedUser || !selectedModel || !prompt.trim()) {
             return;
         }
 
-        setLoading(true);
-        setError("");
-        setSuccess("");
+        setSubmitLoading(true);
+        setSubmitError("");
+        setSubmitSuccess("");
 
         try {
             await api.submitTask(selectedUser, selectedModel, prompt.trim());
-            setPrompt("");
-            setSuccess("Task submitted.");
 
-            const nextTasks = await api.getTasks(selectedUser);
+            const [nextTasks, nextUsers] = await Promise.all([
+                api.getTasks(selectedUser),
+                api.getUsers(),
+            ]);
+
             setTasks(normalizeList(nextTasks));
-        } catch (err) {
-            setError(err.message);
+            setUsers(normalizeList(nextUsers));
+            setPrompt("");
+            setSubmitSuccess("Task submitted.");
+        } catch (error) {
+            setSubmitError(error.message);
         } finally {
-            setLoading(false);
+            setSubmitLoading(false);
         }
     };
 
-    const currentUser = users.find((user) => user.id === selectedUser);
-    const currentModel = models.find((model) => model.id === selectedModel);
-    const sortedTasks = normalizeList(tasks).sort(
-        (left, right) => new Date(right.createdAt) - new Date(left.createdAt),
-    );
+    if (bootLoading) {
+        return (
+            <div className="dashboard-layout">
+                <aside className="panel control-panel">
+                    <div className="empty-state">Loading dashboard...</div>
+                </aside>
+                <section className="panel task-panel">
+                    <div className="empty-state">Loading tasks...</div>
+                </section>
+            </div>
+        );
+    }
 
     return (
         <div className="dashboard-layout">
@@ -146,11 +245,7 @@ export default function Dashboard() {
                         <select
                             id="user-select"
                             value={selectedUser}
-                            onChange={(event) => {
-                                setSelectedUser(event.target.value);
-                                setError("");
-                                setSuccess("");
-                            }}
+                            onChange={handleUserChange}
                             className="field-input"
                         >
                             <option value="">Select user</option>
@@ -169,11 +264,7 @@ export default function Dashboard() {
                         <select
                             id="model-select"
                             value={selectedModel}
-                            onChange={(event) => {
-                                setSelectedModel(event.target.value);
-                                setError("");
-                                setSuccess("");
-                            }}
+                            onChange={handleModelChange}
                             className="field-input"
                         >
                             <option value="">Select model</option>
@@ -214,15 +305,21 @@ export default function Dashboard() {
                             onChange={(event) => setPrompt(event.target.value)}
                             className="field-input field-textarea"
                             placeholder="Enter prompt"
-                            disabled={!selectedUser || !selectedModel || loading}
+                            disabled={
+                                !selectedUser || !selectedModel || submitLoading
+                            }
                         />
                     </section>
 
-                    {(error || success) && (
-                        <div
-                            className={`notice ${error ? "notice-error" : "notice-success"}`}
-                        >
-                            {error || success}
+                    {screenError && (
+                        <div className="notice notice-error">{screenError}</div>
+                    )}
+                    {submitError && (
+                        <div className="notice notice-error">{submitError}</div>
+                    )}
+                    {submitSuccess && (
+                        <div className="notice notice-success">
+                            {submitSuccess}
                         </div>
                     )}
 
@@ -230,13 +327,13 @@ export default function Dashboard() {
                         type="submit"
                         className="submit-button"
                         disabled={
-                            loading ||
+                            submitLoading ||
                             !selectedUser ||
                             !selectedModel ||
                             !prompt.trim()
                         }
                     >
-                        {loading ? "Submitting..." : "Submit"}
+                        {submitLoading ? "Submitting..." : "Submit"}
                     </button>
                 </form>
             </aside>
@@ -247,20 +344,37 @@ export default function Dashboard() {
                         <span>Tasks</span>
                         <span>{sortedTasks.length}</span>
                     </div>
+                    <div className="task-summary">
+                        <span className="task-summary-item">
+                            Queued {queuedCount}
+                        </span>
+                        <span className="task-summary-item">
+                            Processing {processingCount}
+                        </span>
+                        <span className="task-summary-item">
+                            Completed {completedCount}
+                        </span>
+                    </div>
                 </div>
 
-                {!selectedUser ? (
+                {screenError && !selectedUser ? (
+                    <div className="empty-state">{screenError}</div>
+                ) : !selectedUser ? (
                     <div className="empty-state">
-                        Select a user to view task history.
+                        Select a user to view tasks.
                     </div>
+                ) : taskLoading && sortedTasks.length === 0 ? (
+                    <div className="empty-state">Loading tasks...</div>
                 ) : sortedTasks.length === 0 ? (
-                    <div className="empty-state">No tasks found for this user.</div>
+                    <div className="empty-state">
+                        No tasks available for the selected user.
+                    </div>
                 ) : (
                     <div className="task-list">
                         {sortedTasks.map((task) => {
-                            const model = models.find(
-                                (item) => item.id === task.modelId,
-                            );
+                            const taskModel =
+                                models.find((model) => model.id === task.modelId) ||
+                                null;
 
                             return (
                                 <article key={task.id} className="task-card">
@@ -270,7 +384,7 @@ export default function Dashboard() {
                                                 {task.status}
                                             </span>
                                             <span className="task-model">
-                                                {model?.name || task.modelId}
+                                                {taskModel?.name || task.modelId}
                                             </span>
                                         </div>
                                         <span className="task-created-at">
@@ -285,7 +399,9 @@ export default function Dashboard() {
                                         </div>
                                         <div className="task-detail">
                                             <dt>Model</dt>
-                                            <dd>{model?.name || task.modelId}</dd>
+                                            <dd>
+                                                {taskModel?.name || task.modelId}
+                                            </dd>
                                         </div>
                                         <div className="task-detail task-detail-wide">
                                             <dt>Prompt</dt>
@@ -305,4 +421,3 @@ export default function Dashboard() {
         </div>
     );
 }
-
