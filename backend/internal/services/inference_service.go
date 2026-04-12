@@ -3,10 +3,17 @@ package services
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 
 	"ai-inference-gateway/internal/models"
 	"ai-inference-gateway/internal/repositories"
+)
+
+var (
+	ErrUserNotFound        = errors.New("user not found")
+	ErrModelNotFound       = errors.New("model not found")
+	ErrInsufficientBalance = errors.New("insufficient token balance")
 )
 
 // InferenceService — це ядро системи (білінг + оркестрація). Він об'єднує роботу одразу 4-х репозиторіїв
@@ -43,18 +50,18 @@ func (s *InferenceService) SubmitPrompt(userID, modelID, payload string) (*model
 	// 1. Шукаємо користувача. Якщо його немає — повертаємо помилку 404/422
 	user, err := s.userRepo.GetByID(userID)
 	if err != nil {
-		return nil, fmt.Errorf("user not found: %w", err)
+		return nil, fmt.Errorf("%w: %s", ErrUserNotFound, userID)
 	}
 
 	// 2. Шукаємо модель. Нам потрібно знати її вартість (TokenCost)
 	model, err := s.modelRepo.GetByID(modelID)
 	if err != nil {
-		return nil, fmt.Errorf("model not found: %w", err)
+		return nil, fmt.Errorf("%w: %s", ErrModelNotFound, modelID)
 	}
 
 	// 3. БІЗНЕС-ПРАВИЛО: Перевіряємо, чи вистачає у юзера грошей (токенів)
 	if user.TokenBalance < model.TokenCost {
-		return nil, fmt.Errorf("insufficient token balance: have %.2f, need %.2f",
+		return nil, fmt.Errorf("%w: have %.2f, need %.2f", ErrInsufficientBalance,
 			user.TokenBalance, model.TokenCost)
 	}
 
