@@ -1,4 +1,5 @@
 import Dashboard from "./components/Dashboard";
+import "./styles/app.css";
 
 export default function App() {
     return (
