@@ -1,6 +1,6 @@
 import "../styles/components/EmptyState.css";
 
-export default function EmptyState({ title, description }) {
+const EmptyState = ({ title, description }) => {
     return (
         <div className="empty-state">
             <div className="empty-state-copy">
@@ -11,4 +11,6 @@ export default function EmptyState({ title, description }) {
             </div>
         </div>
     );
-}
+};
+
+export default EmptyState;

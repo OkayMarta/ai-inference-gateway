@@ -2,7 +2,7 @@ import EmptyState from "./EmptyState";
 import SectionCard from "./SectionCard";
 import StatusBadge from "./StatusBadge";
 
-function formatTimestamp(value) {
+const formatTimestamp = (value) => {
     if (!value) {
         return "-";
     }
@@ -19,26 +19,26 @@ function formatTimestamp(value) {
         hour: "2-digit",
         minute: "2-digit",
     }).format(date);
-}
+};
 
-function getTaskResult(task) {
+const getTaskResult = (task) => {
     if (task.status === "Completed" || task.status === "Failed") {
         return task.result || "-";
     }
 
     return "Task is still being processed.";
-}
+};
 
-export default function TaskList({
+const TaskList = ({
     models,
-    selectedUser,
+    selectedUserId,
     screenError,
     taskLoading,
     sortedTasks,
     queuedCount,
     processingCount,
     completedCount,
-}) {
+}) => {
     const taskSummary = (
         <div className="task-summary">
             <span className="task-summary-item">Queued {queuedCount}</span>
@@ -49,11 +49,11 @@ export default function TaskList({
 
     let content = null;
 
-    if (screenError && !selectedUser) {
+    if (screenError && !selectedUserId) {
         content = (
             <EmptyState title={screenError} description="Try reloading the dashboard." />
         );
-    } else if (!selectedUser) {
+    } else if (!selectedUserId) {
         content = (
             <EmptyState
                 title="No user selected"
@@ -142,4 +142,6 @@ export default function TaskList({
             {content}
         </SectionCard>
     );
-}
+};
+
+export default TaskList;

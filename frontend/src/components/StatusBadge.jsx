@@ -1,6 +1,6 @@
 import "../styles/components/StatusBadge.css";
 
-function getStatusClass(status) {
+const getStatusClass = (status) => {
     switch (status) {
         case "Completed":
             return "status-badge status-completed";
@@ -11,8 +11,10 @@ function getStatusClass(status) {
         default:
             return "status-badge status-queued";
     }
-}
+};
 
-export default function StatusBadge({ status }) {
+const StatusBadge = ({ status }) => {
     return <span className={getStatusClass(status)}>{status}</span>;
-}
+};
+
+export default StatusBadge;

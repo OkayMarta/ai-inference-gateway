@@ -1,7 +1,7 @@
 import Dashboard from "./components/Dashboard";
 import "./styles/app.css";
 
-export default function App() {
+const App = () => {
     return (
         <div className="app-shell">
             <header className="app-header">
@@ -15,4 +15,6 @@ export default function App() {
             </main>
         </div>
     );
-}
+};
+
+export default App;

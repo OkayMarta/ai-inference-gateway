@@ -1,13 +1,13 @@
 import "../styles/components/SectionCard.css";
 
-export default function SectionCard({
+const SectionCard = ({
     as: Component = "section",
     className = "",
     title,
     subtitle,
     rightSlot,
     children,
-}) {
+}) => {
     const cardClassName = ["panel", className].filter(Boolean).join(" ");
 
     return (
@@ -28,4 +28,6 @@ export default function SectionCard({
             {children}
         </Component>
     );
-}
+};
+
+export default SectionCard;

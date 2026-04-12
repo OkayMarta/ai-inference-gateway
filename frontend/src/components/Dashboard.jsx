@@ -6,21 +6,21 @@ import TaskComposer from "./TaskComposer";
 import TaskList from "./TaskList";
 import "../styles/components/Dashboard.css";
 
-function normalizeList(value) {
+const normalizeList = (value) => {
     return Array.isArray(value) ? value : [];
-}
+};
 
-function countTasksByStatus(tasks, status) {
+const countTasksByStatus = (tasks, status) => {
     return tasks.filter((task) => task.status === status).length;
-}
+};
 
-export default function Dashboard() {
+const Dashboard = () => {
     const [users, setUsers] = useState([]);
     const [models, setModels] = useState([]);
     const [tasks, setTasks] = useState([]);
 
-    const [selectedUser, setSelectedUser] = useState("");
-    const [selectedModel, setSelectedModel] = useState("");
+    const [selectedUserId, setSelectedUserId] = useState("");
+    const [selectedModelId, setSelectedModelId] = useState("");
     const [prompt, setPrompt] = useState("");
 
     const [bootLoading, setBootLoading] = useState(true);
@@ -31,18 +31,18 @@ export default function Dashboard() {
     const [submitSuccess, setSubmitSuccess] = useState("");
 
     const currentUser = useMemo(
-        () => users.find((user) => user.id === selectedUser) || null,
-        [users, selectedUser],
+        () => users.find((user) => user.id === selectedUserId) || null,
+        [users, selectedUserId],
     );
 
     const currentModel = useMemo(
-        () => models.find((model) => model.id === selectedModel) || null,
-        [models, selectedModel],
+        () => models.find((model) => model.id === selectedModelId) || null,
+        [models, selectedModelId],
     );
 
     const sortedTasks = useMemo(
         () =>
-            normalizeList(tasks).sort(
+            [...normalizeList(tasks)].sort(
                 (left, right) =>
                     new Date(right.createdAt) - new Date(left.createdAt),
             ),
@@ -66,7 +66,7 @@ export default function Dashboard() {
 
     const hasBootData = users.length > 0 || models.length > 0;
     const composerScreenError = !hasBootData ? screenError : "";
-    const taskScreenError = selectedUser ? screenError : "";
+    const taskScreenError = selectedUserId ? screenError : "";
 
     useEffect(() => {
         let active = true;
@@ -106,7 +106,7 @@ export default function Dashboard() {
     }, []);
 
     useEffect(() => {
-        if (!selectedUser) {
+        if (!selectedUserId) {
             setTasks([]);
             setTaskLoading(false);
             return;
@@ -120,7 +120,7 @@ export default function Dashboard() {
 
             try {
                 const [nextTasks, nextUsers] = await Promise.all([
-                    api.getTasks(selectedUser),
+                    api.getTasks(selectedUserId),
                     api.getUsers(),
                 ]);
 
@@ -148,7 +148,7 @@ export default function Dashboard() {
             active = false;
             clearInterval(intervalId);
         };
-    }, [selectedUser]);
+    }, [selectedUserId]);
 
     useEffect(() => {
         if (!submitSuccess) {
@@ -163,14 +163,14 @@ export default function Dashboard() {
     }, [submitSuccess]);
 
     const handleUserChange = (event) => {
-        setSelectedUser(event.target.value);
+        setSelectedUserId(event.target.value);
         setSubmitError("");
         setSubmitSuccess("");
         setScreenError("");
     };
 
     const handleModelChange = (event) => {
-        setSelectedModel(event.target.value);
+        setSelectedModelId(event.target.value);
         setSubmitError("");
         setSubmitSuccess("");
     };
@@ -183,7 +183,7 @@ export default function Dashboard() {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
-        if (!selectedUser || !selectedModel || !prompt.trim()) {
+        if (!selectedUserId || !selectedModelId || !prompt.trim()) {
             return;
         }
 
@@ -192,10 +192,10 @@ export default function Dashboard() {
         setSubmitSuccess("");
 
         try {
-            await api.submitTask(selectedUser, selectedModel, prompt.trim());
+            await api.submitTask(selectedUserId, selectedModelId, prompt.trim());
 
             const [nextTasks, nextUsers] = await Promise.all([
-                api.getTasks(selectedUser),
+                api.getTasks(selectedUserId),
                 api.getUsers(),
             ]);
 
@@ -234,8 +234,8 @@ export default function Dashboard() {
             <TaskComposer
                 users={users}
                 models={models}
-                selectedUser={selectedUser}
-                selectedModel={selectedModel}
+                selectedUserId={selectedUserId}
+                selectedModelId={selectedModelId}
                 prompt={prompt}
                 currentUser={currentUser}
                 currentModel={currentModel}
@@ -251,7 +251,7 @@ export default function Dashboard() {
 
             <TaskList
                 models={models}
-                selectedUser={selectedUser}
+                selectedUserId={selectedUserId}
                 screenError={taskScreenError}
                 taskLoading={taskLoading}
                 sortedTasks={sortedTasks}
@@ -261,4 +261,6 @@ export default function Dashboard() {
             />
         </div>
     );
-}
+};
+
+export default Dashboard;

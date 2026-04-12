@@ -1,7 +1,7 @@
 const API_BASE = "/api";
 const DEFAULT_ERROR_MESSAGE = "Server request failed";
 
-async function parseResponse(response) {
+const parseResponse = async (response) => {
     const contentType = response.headers.get("content-type") || "";
     const isJsonResponse = contentType.includes("application/json");
 
@@ -11,9 +11,9 @@ async function parseResponse(response) {
 
     const text = await response.text();
     return text || null;
-}
+};
 
-function getErrorMessage(responseBody) {
+const getErrorMessage = (responseBody) => {
     if (responseBody && typeof responseBody === "object" && responseBody.message) {
         return responseBody.message;
     }
@@ -23,17 +23,17 @@ function getErrorMessage(responseBody) {
     }
 
     return DEFAULT_ERROR_MESSAGE;
-}
+};
 
-function normalizeSubmitTaskArgs(userIdOrParams, modelId, payload) {
+const normalizeSubmitTaskPayload = (userIdOrParams, modelId, payload) => {
     if (userIdOrParams && typeof userIdOrParams === "object") {
         return userIdOrParams;
     }
 
     return { userId: userIdOrParams, modelId, payload };
-}
+};
 
-async function request(url, options = {}) {
+const request = async (url, options = {}) => {
     const response = await fetch(`${API_BASE}${url}`, {
         headers: {
             "Content-Type": "application/json",
@@ -49,14 +49,18 @@ async function request(url, options = {}) {
     }
 
     return data;
-}
+};
 
 export const api = {
     getUsers: () => request("/users"),
     getModels: () => request("/models"),
     getTasks: (userId) => request(`/tasks?userId=${encodeURIComponent(userId)}`),
     submitTask: (userIdOrParams, modelId, payload) => {
-        const task = normalizeSubmitTaskArgs(userIdOrParams, modelId, payload);
+        const task = normalizeSubmitTaskPayload(
+            userIdOrParams,
+            modelId,
+            payload,
+        );
 
         return request("/tasks", {
             method: "POST",

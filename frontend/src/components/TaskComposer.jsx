@@ -1,10 +1,10 @@
 import SectionCard from "./SectionCard";
 
-export default function TaskComposer({
+const TaskComposer = ({
     users,
     models,
-    selectedUser,
-    selectedModel,
+    selectedUserId,
+    selectedModelId,
     prompt,
     currentUser,
     currentModel,
@@ -16,7 +16,7 @@ export default function TaskComposer({
     onModelChange,
     onPromptChange,
     onSubmit,
-}) {
+}) => {
     return (
         <SectionCard as="aside" className="control-panel">
             <form className="control-form" onSubmit={onSubmit}>
@@ -26,7 +26,7 @@ export default function TaskComposer({
                     </label>
                     <select
                         id="user-select"
-                        value={selectedUser}
+                        value={selectedUserId}
                         onChange={onUserChange}
                         className="field-input"
                     >
@@ -45,7 +45,7 @@ export default function TaskComposer({
                     </label>
                     <select
                         id="model-select"
-                        value={selectedModel}
+                        value={selectedModelId}
                         onChange={onModelChange}
                         className="field-input"
                     >
@@ -83,7 +83,9 @@ export default function TaskComposer({
                         onChange={onPromptChange}
                         className="field-input field-textarea"
                         placeholder="Enter prompt"
-                        disabled={!selectedUser || !selectedModel || submitLoading}
+                        disabled={
+                            !selectedUserId || !selectedModelId || submitLoading
+                        }
                     />
                 </section>
 
@@ -98,8 +100,8 @@ export default function TaskComposer({
                     className="submit-button"
                     disabled={
                         submitLoading ||
-                        !selectedUser ||
-                        !selectedModel ||
+                        !selectedUserId ||
+                        !selectedModelId ||
                         !prompt.trim()
                     }
                 >
@@ -108,4 +110,6 @@ export default function TaskComposer({
             </form>
         </SectionCard>
     );
-}
+};
+
+export default TaskComposer;
