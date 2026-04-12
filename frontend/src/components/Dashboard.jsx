@@ -64,6 +64,10 @@ export default function Dashboard() {
         [sortedTasks],
     );
 
+    const hasBootData = users.length > 0 || models.length > 0;
+    const composerScreenError = !hasBootData ? screenError : "";
+    const taskScreenError = selectedUser ? screenError : "";
+
     useEffect(() => {
         let active = true;
 
@@ -146,6 +150,18 @@ export default function Dashboard() {
         };
     }, [selectedUser]);
 
+    useEffect(() => {
+        if (!submitSuccess) {
+            return undefined;
+        }
+
+        const timeoutId = window.setTimeout(() => {
+            setSubmitSuccess("");
+        }, 2400);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [submitSuccess]);
+
     const handleUserChange = (event) => {
         setSelectedUser(event.target.value);
         setSubmitError("");
@@ -160,6 +176,8 @@ export default function Dashboard() {
     };
 
     const handlePromptChange = (event) => {
+        setSubmitError("");
+        setSubmitSuccess("");
         setPrompt(event.target.value);
     };
 
@@ -221,7 +239,7 @@ export default function Dashboard() {
                 prompt={prompt}
                 currentUser={currentUser}
                 currentModel={currentModel}
-                screenError={screenError}
+                screenError={composerScreenError}
                 submitError={submitError}
                 submitSuccess={submitSuccess}
                 submitLoading={submitLoading}
@@ -234,7 +252,7 @@ export default function Dashboard() {
             <TaskList
                 models={models}
                 selectedUser={selectedUser}
-                screenError={screenError}
+                screenError={taskScreenError}
                 taskLoading={taskLoading}
                 sortedTasks={sortedTasks}
                 queuedCount={queuedCount}

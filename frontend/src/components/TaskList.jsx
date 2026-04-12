@@ -64,6 +64,10 @@ export default function TaskList({
         content = (
             <EmptyState title="Loading tasks" description="Task history is being loaded." />
         );
+    } else if (screenError && sortedTasks.length === 0) {
+        content = (
+            <EmptyState title="Unable to load tasks" description={screenError} />
+        );
     } else if (sortedTasks.length === 0) {
         content = (
             <EmptyState
@@ -73,46 +77,53 @@ export default function TaskList({
         );
     } else {
         content = (
-            <div className="task-list">
-                {sortedTasks.map((task) => {
-                    const taskModel =
-                        models.find((model) => model.id === task.modelId) || null;
+            <div className="task-list-stack">
+                {screenError && (
+                    <div className="notice notice-error notice-quiet">
+                        {screenError}
+                    </div>
+                )}
+                <div className="task-list">
+                    {sortedTasks.map((task) => {
+                        const taskModel =
+                            models.find((model) => model.id === task.modelId) || null;
 
-                    return (
-                        <article key={task.id} className="task-card">
-                            <div className="task-card-header">
-                                <div className="task-title-row">
-                                    <StatusBadge status={task.status} />
-                                    <span className="task-model">
-                                        {taskModel?.name || task.modelId}
+                        return (
+                            <article key={task.id} className="task-card">
+                                <div className="task-card-header">
+                                    <div className="task-title-row">
+                                        <StatusBadge status={task.status} />
+                                        <span className="task-model">
+                                            {taskModel?.name || task.modelId}
+                                        </span>
+                                    </div>
+                                    <span className="task-created-at">
+                                        {formatTimestamp(task.createdAt)}
                                     </span>
                                 </div>
-                                <span className="task-created-at">
-                                    {formatTimestamp(task.createdAt)}
-                                </span>
-                            </div>
 
-                            <dl className="task-details-grid">
-                                <div className="task-detail">
-                                    <dt>Task ID</dt>
-                                    <dd>{task.id}</dd>
-                                </div>
-                                <div className="task-detail">
-                                    <dt>Model</dt>
-                                    <dd>{taskModel?.name || task.modelId}</dd>
-                                </div>
-                                <div className="task-detail task-detail-wide">
-                                    <dt>Prompt</dt>
-                                    <dd>{task.payload}</dd>
-                                </div>
-                                <div className="task-detail task-detail-wide">
-                                    <dt>Result</dt>
-                                    <dd>{getTaskResult(task)}</dd>
-                                </div>
-                            </dl>
-                        </article>
-                    );
-                })}
+                                <dl className="task-details-grid">
+                                    <div className="task-detail">
+                                        <dt>Task ID</dt>
+                                        <dd>{task.id}</dd>
+                                    </div>
+                                    <div className="task-detail">
+                                        <dt>Model</dt>
+                                        <dd>{taskModel?.name || task.modelId}</dd>
+                                    </div>
+                                    <div className="task-detail task-detail-wide">
+                                        <dt>Prompt</dt>
+                                        <dd>{task.payload}</dd>
+                                    </div>
+                                    <div className="task-detail task-detail-wide">
+                                        <dt>Result</dt>
+                                        <dd>{getTaskResult(task)}</dd>
+                                    </div>
+                                </dl>
+                            </article>
+                        );
+                    })}
+                </div>
             </div>
         );
     }

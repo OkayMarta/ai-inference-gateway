@@ -99,6 +99,7 @@
     border: 1px solid transparent;
     border-radius: 12px;
     font-size: 0.875rem;
+    line-height: 1.55;
 }
 
 .notice-error {
@@ -111,6 +112,11 @@
     border-color: var(--color-success-border);
     background: var(--color-success-bg);
     color: var(--color-success-text);
+}
+
+.notice-quiet {
+    border-color: rgba(248, 113, 113, 0.16);
+    background: rgba(248, 113, 113, 0.08);
 }
 
 .submit-button {
@@ -191,6 +197,14 @@
     min-height: 0;
     overflow-y: auto;
     padding-right: 4px;
+}
+
+.task-list-stack {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
 }
 
 .task-card {
