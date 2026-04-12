@@ -1,4 +1,4 @@
-import "./StatusBadge.css";
+import "../styles/components/StatusBadge.css";
 
 function getStatusClass(status) {
     switch (status) {

@@ -1,4 +1,4 @@
-import "./SectionCard.css";
+import "../styles/components/SectionCard.css";
 
 export default function SectionCard({
     as: Component = "section",
