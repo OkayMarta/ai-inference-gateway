@@ -1,5 +1,45 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
+
+function formatTimestamp(value) {
+    if (!value) {
+        return "-";
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    return new Intl.DateTimeFormat("uk-UA", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(date);
+}
+
+function getStatusClass(status) {
+    switch (status) {
+        case "Completed":
+            return "status-badge status-completed";
+        case "Processing":
+            return "status-badge status-processing";
+        case "Failed":
+            return "status-badge status-failed";
+        default:
+            return "status-badge status-queued";
+    }
+}
+
+function getTaskResult(task) {
+    if (task.status === "Completed" || task.status === "Failed") {
+        return task.result || "-";
+    }
+
+    return "Task is still being processed.";
+}
 
 export default function Dashboard() {
     const [users, setUsers] = useState([]);
@@ -11,50 +51,75 @@ export default function Dashboard() {
     const [prompt, setPrompt] = useState("");
 
     const [loading, setLoading] = useState(false);
+    const [loadingTasks, setLoadingTasks] = useState(false);
     const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
 
-    const messagesEndRef = useRef(null);
-
-    // 1. При першому завантаженні отримуємо списки юзерів і моделей
     useEffect(() => {
-        api.getUsers().then(setUsers).catch(console.error);
-        api.getModels().then(setModels).catch(console.error);
+        api.getUsers().then(setUsers).catch((err) => setError(err.message));
+        api.getModels().then(setModels).catch((err) => setError(err.message));
     }, []);
 
-    // 2. Опитування (Polling) - кожні 2 секунди оновлюємо задачі обраного юзера
     useEffect(() => {
         if (!selectedUser) {
             setTasks([]);
+            setSuccess("");
             return;
         }
 
-        const fetchTasks = () => {
-            api.getTasks(selectedUser).then(setTasks).catch(console.error);
-            // Також оновлюємо баланс юзера у списку
-            api.getUsers().then(setUsers).catch(console.error);
+        let active = true;
+
+        const fetchTasks = async () => {
+            setLoadingTasks(true);
+            try {
+                const [nextTasks, nextUsers] = await Promise.all([
+                    api.getTasks(selectedUser),
+                    api.getUsers(),
+                ]);
+
+                if (!active) {
+                    return;
+                }
+
+                setTasks(nextTasks);
+                setUsers(nextUsers);
+            } catch (err) {
+                if (active) {
+                    setError(err.message);
+                }
+            } finally {
+                if (active) {
+                    setLoadingTasks(false);
+                }
+            }
         };
 
-        fetchTasks(); // Викликаємо одразу
-        const interval = setInterval(fetchTasks, 2000); // І потім кожні 2 сек
+        fetchTasks();
+        const intervalId = setInterval(fetchTasks, 2000);
 
-        return () => clearInterval(interval); // Очищаємо при зміні юзера
+        return () => {
+            active = false;
+            clearInterval(intervalId);
+        };
     }, [selectedUser]);
 
-    // Автоскрол до останнього повідомлення
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [tasks]);
-
-    // Відправка форми
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!selectedUser || !selectedModel || !prompt.trim()) return;
+    const handleSubmit = async (event) => {
+        event.preventDefault();
+        if (!selectedUser || !selectedModel || !prompt.trim()) {
+            return;
+        }
 
         setLoading(true);
         setError("");
+        setSuccess("");
+
         try {
             await api.submitTask(selectedUser, selectedModel, prompt.trim());
-            setPrompt(""); // Очищаємо поле
+            setPrompt("");
+            setSuccess("Task submitted.");
+
+            const nextTasks = await api.getTasks(selectedUser);
+            setTasks(nextTasks);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -62,165 +127,183 @@ export default function Dashboard() {
         }
     };
 
-    const currentUser = users.find((u) => u.id === selectedUser);
-    const selectedModelInfo = models.find((m) => m.id === selectedModel);
-
-    // Сортуємо задачі від старих до нових для чату
+    const currentUser = users.find((user) => user.id === selectedUser);
+    const currentModel = models.find((model) => model.id === selectedModel);
     const sortedTasks = [...tasks].sort(
-        (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+        (left, right) => new Date(right.createdAt) - new Date(left.createdAt),
     );
 
     return (
-        <div className="space-y-6">
-            {/* Верхня панель: Вибір юзера і баланс */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="glass-card p-5">
-                    <label className="block text-white/50 text-sm font-medium mb-2">
-                        Обрати користувача
-                    </label>
-                    <select
-                        value={selectedUser}
-                        onChange={(e) => setSelectedUser(e.target.value)}
-                        className="input-field"
-                    >
-                        <option value="">Оберіть...</option>
-                        {users.map((u) => (
-                            <option key={u.id} value={u.id}>
-                                {u.username}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                <div className="glass-card p-5 flex items-center justify-between">
-                    <div>
-                        <p className="text-white/50 text-sm font-medium">
-                            Баланс токенів
-                        </p>
-                        <p className="text-3xl font-bold gradient-text mt-1">
-                            {currentUser
-                                ? currentUser.tokenBalance.toFixed(1)
-                                : "—"}
-                        </p>
-                    </div>
-                    <div className="text-4xl">💎</div>
-                </div>
-            </div>
-
-            {/* Вибір моделі */}
-            <div>
-                <h2 className="text-sm font-semibold text-white/50 mb-3">
-                    Доступні ШІ-моделі
-                </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {models.map((m) => (
-                        <button
-                            key={m.id}
-                            onClick={() => setSelectedModel(m.id)}
-                            className={`glass-card p-4 text-left transition-all duration-300 ${
-                                selectedModel === m.id
-                                    ? "border-indigo-500 shadow-lg shadow-indigo-500/20 bg-indigo-500/10"
-                                    : "hover:border-white/30"
-                            }`}
+        <div className="dashboard-layout">
+            <aside className="panel control-panel">
+                <form className="control-form" onSubmit={handleSubmit}>
+                    <section className="control-section">
+                        <label className="field-label" htmlFor="user-select">
+                            User
+                        </label>
+                        <select
+                            id="user-select"
+                            value={selectedUser}
+                            onChange={(event) => {
+                                setSelectedUser(event.target.value);
+                                setError("");
+                                setSuccess("");
+                            }}
+                            className="field-input"
                         >
-                            <h3 className="font-bold text-white text-sm">
-                                {m.name}
-                            </h3>
-                            <p className="text-indigo-300 font-semibold text-xs mt-2">
-                                {m.tokenCost} токенів
-                            </p>
-                        </button>
-                    ))}
-                </div>
-            </div>
+                            <option value="">Select user</option>
+                            {users.map((user) => (
+                                <option key={user.id} value={user.id}>
+                                    {user.username}
+                                </option>
+                            ))}
+                        </select>
+                    </section>
 
-            {/* Вікно чату (Історія задач) */}
-            <div className="glass-card p-4 h-[400px] overflow-y-auto space-y-4">
-                {sortedTasks.length === 0 ? (
-                    <div className="text-center text-white/30 mt-20">
-                        Завдань ще немає. Надішліть перший запит!
-                    </div>
-                ) : (
-                    sortedTasks.map((task) => {
-                        const m = models.find((x) => x.id === task.modelId);
-                        return (
-                            <div key={task.id} className="space-y-2">
-                                {/* Запит юзера */}
-                                <div className="flex justify-end">
-                                    <div className="max-w-[80%] bg-indigo-600/40 border border-indigo-500/30 rounded-2xl rounded-tr-sm px-4 py-2 text-sm">
-                                        {task.payload}
-                                    </div>
-                                </div>
-                                {/* Відповідь ШІ */}
-                                <div className="flex justify-start">
-                                    <div className="max-w-[85%] bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3 space-y-2">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs font-bold text-rose-400">
-                                                🤖 {m?.name || task.modelId}
-                                            </span>
-                                            <span
-                                                className={`badge ${
-                                                    task.status === "Processing"
-                                                        ? "badge-processing"
-                                                        : task.status ===
-                                                            "Completed"
-                                                          ? "badge-completed"
-                                                          : task.status ===
-                                                              "Failed"
-                                                            ? "badge-failed"
-                                                            : "badge-queued"
-                                                }`}
-                                            >
-                                                {task.status}
-                                            </span>
-                                        </div>
-                                        <p className="text-white/80 text-sm whitespace-pre-wrap">
-                                            {task.status === "Completed" ||
-                                            task.status === "Failed" ? (
-                                                task.result
-                                            ) : (
-                                                <span className="text-white/30 italic">
-                                                    Очікуємо генерацію...
-                                                </span>
-                                            )}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })
-                )}
-                <div ref={messagesEndRef} />
-            </div>
+                    <section className="control-section">
+                        <label className="field-label" htmlFor="model-select">
+                            Model
+                        </label>
+                        <select
+                            id="model-select"
+                            value={selectedModel}
+                            onChange={(event) => {
+                                setSelectedModel(event.target.value);
+                                setError("");
+                                setSuccess("");
+                            }}
+                            className="field-input"
+                        >
+                            <option value="">Select model</option>
+                            {models.map((model) => (
+                                <option key={model.id} value={model.id}>
+                                    {model.name}
+                                </option>
+                            ))}
+                        </select>
+                    </section>
 
-            {/* Форма вводу */}
-            <form onSubmit={handleSubmit} className="glass-card p-4">
-                {error && (
-                    <div className="text-rose-400 text-sm mb-2">{error}</div>
-                )}
-                <div className="flex gap-3">
-                    <input
-                        type="text"
-                        value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
-                        placeholder="Введіть ваш запит (промпт)..."
-                        className="input-field flex-1"
-                        disabled={!selectedUser || !selectedModel}
-                    />
+                    <section className="metrics-grid">
+                        <div className="metric-card">
+                            <span className="metric-label">Balance</span>
+                            <span className="metric-value">
+                                {currentUser
+                                    ? currentUser.tokenBalance.toFixed(1)
+                                    : "-"}
+                            </span>
+                        </div>
+                        <div className="metric-card">
+                            <span className="metric-label">Model cost</span>
+                            <span className="metric-value">
+                                {currentModel
+                                    ? currentModel.tokenCost.toFixed(1)
+                                    : "-"}
+                            </span>
+                        </div>
+                    </section>
+
+                    <section className="control-section">
+                        <label className="field-label" htmlFor="prompt-input">
+                            Prompt
+                        </label>
+                        <textarea
+                            id="prompt-input"
+                            value={prompt}
+                            onChange={(event) => setPrompt(event.target.value)}
+                            className="field-input field-textarea"
+                            placeholder="Enter prompt"
+                            disabled={!selectedUser || !selectedModel || loading}
+                        />
+                    </section>
+
+                    {(error || success) && (
+                        <div
+                            className={`notice ${error ? "notice-error" : "notice-success"}`}
+                        >
+                            {error || success}
+                        </div>
+                    )}
+
                     <button
                         type="submit"
+                        className="submit-button"
                         disabled={
                             loading ||
                             !selectedUser ||
                             !selectedModel ||
                             !prompt.trim()
                         }
-                        className="btn-primary"
                     >
-                        {loading ? "⏳" : "🚀"} Відправити
+                        {loading ? "Submitting..." : "Submit"}
                     </button>
+                </form>
+            </aside>
+
+            <section className="panel task-panel">
+                <div className="task-panel-header">
+                    <div className="task-panel-meta">
+                        <span>Tasks</span>
+                        <span>{sortedTasks.length}</span>
+                    </div>
+                    {loadingTasks && (
+                        <span className="task-panel-loading">Refreshing...</span>
+                    )}
                 </div>
-            </form>
+
+                {!selectedUser ? (
+                    <div className="empty-state">
+                        Select a user to view task history.
+                    </div>
+                ) : sortedTasks.length === 0 ? (
+                    <div className="empty-state">No tasks found for this user.</div>
+                ) : (
+                    <div className="task-list">
+                        {sortedTasks.map((task) => {
+                            const model = models.find(
+                                (item) => item.id === task.modelId,
+                            );
+
+                            return (
+                                <article key={task.id} className="task-card">
+                                    <div className="task-card-header">
+                                        <div className="task-title-row">
+                                            <span className={getStatusClass(task.status)}>
+                                                {task.status}
+                                            </span>
+                                            <span className="task-model">
+                                                {model?.name || task.modelId}
+                                            </span>
+                                        </div>
+                                        <span className="task-created-at">
+                                            {formatTimestamp(task.createdAt)}
+                                        </span>
+                                    </div>
+
+                                    <dl className="task-details-grid">
+                                        <div className="task-detail">
+                                            <dt>Task ID</dt>
+                                            <dd>{task.id}</dd>
+                                        </div>
+                                        <div className="task-detail">
+                                            <dt>Model</dt>
+                                            <dd>{model?.name || task.modelId}</dd>
+                                        </div>
+                                        <div className="task-detail task-detail-wide">
+                                            <dt>Prompt</dt>
+                                            <dd>{task.payload}</dd>
+                                        </div>
+                                        <div className="task-detail task-detail-wide">
+                                            <dt>Result</dt>
+                                            <dd>{getTaskResult(task)}</dd>
+                                        </div>
+                                    </dl>
+                                </article>
+                            );
+                        })}
+                    </div>
+                )}
+            </section>
         </div>
     );
 }
+
