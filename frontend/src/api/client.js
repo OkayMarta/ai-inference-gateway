@@ -1,23 +1,66 @@
 const API_BASE = "/api";
+const DEFAULT_ERROR_MESSAGE = "Server request failed";
+
+async function parseResponse(response) {
+    const contentType = response.headers.get("content-type") || "";
+    const isJsonResponse = contentType.includes("application/json");
+
+    if (isJsonResponse) {
+        return response.json();
+    }
+
+    const text = await response.text();
+    return text || null;
+}
+
+function getErrorMessage(responseBody) {
+    if (responseBody && typeof responseBody === "object" && responseBody.message) {
+        return responseBody.message;
+    }
+
+    if (typeof responseBody === "string" && responseBody.trim()) {
+        return responseBody;
+    }
+
+    return DEFAULT_ERROR_MESSAGE;
+}
+
+function normalizeSubmitTaskArgs(userIdOrParams, modelId, payload) {
+    if (userIdOrParams && typeof userIdOrParams === "object") {
+        return userIdOrParams;
+    }
+
+    return { userId: userIdOrParams, modelId, payload };
+}
 
 async function request(url, options = {}) {
-    const res = await fetch(`${API_BASE}${url}`, {
-        headers: { "Content-Type": "application/json" },
+    const response = await fetch(`${API_BASE}${url}`, {
+        headers: {
+            "Content-Type": "application/json",
+            ...options.headers,
+        },
         ...options,
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Помилка сервера");
+
+    const data = await parseResponse(response);
+
+    if (!response.ok) {
+        throw new Error(getErrorMessage(data));
+    }
+
     return data;
 }
 
 export const api = {
     getUsers: () => request("/users"),
-    getUser: (id) => request(`/users/${id}`),
     getModels: () => request("/models"),
-    submitTask: (userId, modelId, payload) =>
-        request("/tasks", {
+    getTasks: (userId) => request(`/tasks?userId=${encodeURIComponent(userId)}`),
+    submitTask: (userIdOrParams, modelId, payload) => {
+        const task = normalizeSubmitTaskArgs(userIdOrParams, modelId, payload);
+
+        return request("/tasks", {
             method: "POST",
-            body: JSON.stringify({ userId, modelId, payload }),
-        }),
-    getTasks: (userId) => request(`/tasks?userId=${userId}`),
+            body: JSON.stringify(task),
+        });
+    },
 };
