@@ -39,6 +39,8 @@ const TaskList = ({
     processingCount,
     completedCount,
 }) => {
+    const hasSelectedUser = Boolean(selectedUserId);
+
     const taskSummary = (
         <div className="task-summary">
             <span className="task-summary-item">Queued {queuedCount}</span>
@@ -134,8 +136,16 @@ const TaskList = ({
             title="Tasks"
             rightSlot={
                 <div className="task-panel-toolbar">
-                    <div className="task-panel-count">{sortedTasks.length}</div>
-                    {taskSummary}
+                    {hasSelectedUser ? (
+                        <>
+                            <div className="task-panel-count">{sortedTasks.length}</div>
+                            {taskSummary}
+                        </>
+                    ) : (
+                        <div className="task-panel-helper">
+                            Select a user to see tasks
+                        </div>
+                    )}
                 </div>
             }
         >
