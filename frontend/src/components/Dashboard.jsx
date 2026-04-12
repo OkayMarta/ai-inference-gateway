@@ -55,7 +55,6 @@ export default function Dashboard() {
     const [prompt, setPrompt] = useState("");
 
     const [loading, setLoading] = useState(false);
-    const [loadingTasks, setLoadingTasks] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
@@ -78,7 +77,6 @@ export default function Dashboard() {
         let active = true;
 
         const fetchTasks = async () => {
-            setLoadingTasks(true);
             try {
                 const [nextTasks, nextUsers] = await Promise.all([
                     api.getTasks(selectedUser),
@@ -94,10 +92,6 @@ export default function Dashboard() {
             } catch (err) {
                 if (active) {
                     setError(err.message);
-                }
-            } finally {
-                if (active) {
-                    setLoadingTasks(false);
                 }
             }
         };
@@ -253,9 +247,6 @@ export default function Dashboard() {
                         <span>Tasks</span>
                         <span>{sortedTasks.length}</span>
                     </div>
-                    {loadingTasks && (
-                        <span className="task-panel-loading">Refreshing...</span>
-                    )}
                 </div>
 
                 {!selectedUser ? (

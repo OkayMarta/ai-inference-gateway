@@ -12,11 +12,13 @@
 }
 
 html {
+    height: 100%;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
 
 body {
+    height: 100%;
     margin: 0;
     min-width: 320px;
     background:
@@ -24,10 +26,15 @@ body {
         linear-gradient(180deg, #0b1120 0%, #111827 100%);
     color: var(--text);
     font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+    overflow: hidden;
 }
 
 * {
     box-sizing: border-box;
+}
+
+#root {
+    height: 100%;
 }
 
 button,
@@ -38,8 +45,11 @@ textarea {
 }
 
 .app-shell {
-    min-height: 100vh;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
     padding: 24px 16px;
+    overflow: hidden;
 }
 
 .app-header {
@@ -60,11 +70,18 @@ textarea {
 .app-main {
     max-width: 1280px;
     margin: 0 auto;
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .dashboard-layout {
     display: grid;
     gap: 24px;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .panel {
@@ -76,6 +93,10 @@ textarea {
 .control-panel,
 .task-panel {
     padding: 20px;
+}
+
+.control-panel {
+    overflow: hidden;
 }
 
 .control-form {
@@ -198,7 +219,11 @@ textarea {
 }
 
 .task-panel {
+    display: flex;
+    flex-direction: column;
     min-height: 640px;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .task-panel-header {
@@ -228,7 +253,6 @@ textarea {
     font-size: 0.75rem;
 }
 
-.task-panel-loading,
 .empty-state {
     color: var(--text-muted);
     font-size: 0.875rem;
@@ -236,7 +260,11 @@ textarea {
 
 .task-list {
     display: grid;
+    flex: 1;
     gap: 16px;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 4px;
 }
 
 .task-card {
