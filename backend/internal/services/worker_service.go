@@ -94,6 +94,7 @@ func (s *WorkerService) executeTask(modelID, payload string) (string, error) {
 	return fmt.Sprintf("[Симуляція] Відповідь на запит \"%s\" від моделі %s. Згенеровано за %v", payload, aiModel.Name, delay), nil
 }
 
+// shouldSimulateFailure is used only for testing and demo scenarios.
 func shouldSimulateFailure(payload string) bool {
-	return strings.Contains(strings.ToLower(payload), "[fail]")
+	return strings.Contains(strings.ToLower(payload), strings.ToLower("__SIMULATE_FAILURE__"))
 }
