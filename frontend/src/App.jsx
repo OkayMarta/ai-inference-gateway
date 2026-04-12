@@ -9,7 +9,7 @@ export default function App() {
                 <div className="app-header-line" aria-hidden="true" />
             </header>
 
-            <main className="app-main">
+            <main className="app-main" aria-label="Dashboard workspace">
                 <Dashboard />
             </main>
         </div>
