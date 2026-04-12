@@ -48,23 +48,32 @@ textarea {
     height: 100vh;
     display: flex;
     flex-direction: column;
-    padding: 24px 16px;
+    padding: 16px;
     overflow: hidden;
 }
 
 .app-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
     max-width: 1280px;
-    margin: 0 auto 24px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    width: 100%;
+    margin: 0 auto 16px;
 }
 
 .app-title {
     margin: 0;
     color: #f1f5f9;
-    font-size: 1.5rem;
+    font-size: 1.125rem;
     font-weight: 600;
     letter-spacing: -0.02em;
+    white-space: nowrap;
+}
+
+.app-header-line {
+    height: 1px;
+    flex: 1;
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .app-main {
@@ -97,12 +106,14 @@ textarea {
 
 .control-panel {
     overflow: hidden;
+    padding-bottom: 28px;
 }
 
 .control-form {
     display: flex;
     flex-direction: column;
     gap: 20px;
+    min-height: 100%;
 }
 
 .control-section {
@@ -197,6 +208,7 @@ textarea {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    margin-top: 4px;
     padding: 12px 16px;
     border: 0;
     border-radius: 12px;
@@ -369,16 +381,20 @@ textarea {
 
 @media (min-width: 768px) {
     .app-shell {
-        padding: 32px;
+        padding: 20px 24px 24px;
     }
 
     .app-title {
-        font-size: 1.875rem;
+        font-size: 1.25rem;
     }
 
     .control-panel,
     .task-panel {
         padding: 24px;
+    }
+
+    .control-panel {
+        padding-bottom: 32px;
     }
 
     .task-card-header {
@@ -399,5 +415,9 @@ textarea {
 @media (min-width: 1024px) {
     .dashboard-layout {
         grid-template-columns: 340px minmax(0, 1fr);
+    }
+
+    .control-panel {
+        padding-bottom: 36px;
     }
 }
