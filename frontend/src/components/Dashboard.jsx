@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 
+function normalizeList(value) {
+    return Array.isArray(value) ? value : [];
+}
+
 function formatTimestamp(value) {
     if (!value) {
         return "-";
@@ -56,8 +60,12 @@ export default function Dashboard() {
     const [success, setSuccess] = useState("");
 
     useEffect(() => {
-        api.getUsers().then(setUsers).catch((err) => setError(err.message));
-        api.getModels().then(setModels).catch((err) => setError(err.message));
+        api.getUsers()
+            .then((data) => setUsers(normalizeList(data)))
+            .catch((err) => setError(err.message));
+        api.getModels()
+            .then((data) => setModels(normalizeList(data)))
+            .catch((err) => setError(err.message));
     }, []);
 
     useEffect(() => {
@@ -81,8 +89,8 @@ export default function Dashboard() {
                     return;
                 }
 
-                setTasks(nextTasks);
-                setUsers(nextUsers);
+                setTasks(normalizeList(nextTasks));
+                setUsers(normalizeList(nextUsers));
             } catch (err) {
                 if (active) {
                     setError(err.message);
@@ -119,7 +127,7 @@ export default function Dashboard() {
             setSuccess("Task submitted.");
 
             const nextTasks = await api.getTasks(selectedUser);
-            setTasks(nextTasks);
+            setTasks(normalizeList(nextTasks));
         } catch (err) {
             setError(err.message);
         } finally {
@@ -129,7 +137,7 @@ export default function Dashboard() {
 
     const currentUser = users.find((user) => user.id === selectedUser);
     const currentModel = models.find((model) => model.id === selectedModel);
-    const sortedTasks = [...tasks].sort(
+    const sortedTasks = normalizeList(tasks).sort(
         (left, right) => new Date(right.createdAt) - new Date(left.createdAt),
     );
 
