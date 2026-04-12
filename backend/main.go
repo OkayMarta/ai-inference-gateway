@@ -36,8 +36,8 @@ func main() {
 	userSvc := services.NewUserService(userRepo)
 	modelSvc := services.NewModelService(modelRepo)
 	inferenceSvc := services.NewInferenceService(userRepo, modelRepo, taskRepo, txRepo) // Гол. сервіс, який відповідає за створ. задач та білінг (списання токенів)
-	workerSvc := services.NewWorkerService(workerRepo, taskRepo, modelRepo, ollama) // Сервіс фонової обробки задач. Він відповідає за те, щоб брати задачі з черги (Queued) і відправляти їх в Ollama
-	
+	workerSvc := services.NewWorkerService(workerRepo, taskRepo, modelRepo, ollama)     // Сервіс фонової обробки задач. Він відповідає за те, щоб брати задачі з черги (Queued) і відправляти їх в Ollama
+
 	workerSvc.Start() // Запускаємо фоновий цикл в окремій горутині (асинхронно)
 
 	// 4. --- Handlers (HTTP Контролери) ---
@@ -48,12 +48,11 @@ func main() {
 
 	// 5. --- Роутер (Chi) ---
 	r := chi.NewRouter()
-	
+
 	// Middlewares (проміжні обробники)
 	r.Use(chimw.Logger)                // Логування кожного запиту у консоль
-	r.Use(chimw.Recoverer)             // Захист від критичних помилок (panic)
 	r.Use(handlers.RecoveryMiddleware) // Власний обробник для форматування помилок у єдиний JSON
-	
+
 	// Налаштування CORS, щоб фронтенд (наприклад, React на порту 5173) міг робити API-запити
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:5173"},
@@ -155,7 +154,7 @@ func seedDefaultModels(repo *repositories.ModelRepository) {
 // Вони призначені для асинхронної обробки задач. Кожен з них підтримує ВСІ створені раніше моделі, стартовий статус - Idle (Вільний)
 func seedWorkers(workerRepo *repositories.WorkerRepository, modelRepo *repositories.ModelRepository) {
 	allModels := modelRepo.GetAll()
-	
+
 	ids := make([]string, len(allModels))
 	for i, m := range allModels {
 		ids[i] = m.ID
