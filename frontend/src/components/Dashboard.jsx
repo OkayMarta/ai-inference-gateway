@@ -4,6 +4,7 @@ import EmptyState from "./EmptyState";
 import SectionCard from "./SectionCard";
 import TaskComposer from "./TaskComposer";
 import TaskList from "./TaskList";
+import "./Dashboard.css";
 
 function normalizeList(value) {
     return Array.isArray(value) ? value : [];

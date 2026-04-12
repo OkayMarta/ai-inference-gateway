@@ -1,3 +1,5 @@
+import "./StatusBadge.css";
+
 function getStatusClass(status) {
     switch (status) {
         case "Completed":

@@ -1,3 +1,5 @@
+import "./SectionCard.css";
+
 export default function SectionCard({
     as: Component = "section",
     className = "",
