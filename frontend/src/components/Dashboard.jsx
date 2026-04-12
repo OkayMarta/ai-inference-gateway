@@ -1,48 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
+import EmptyState from "./EmptyState";
+import SectionCard from "./SectionCard";
+import TaskComposer from "./TaskComposer";
+import TaskList from "./TaskList";
 
 function normalizeList(value) {
     return Array.isArray(value) ? value : [];
-}
-
-function formatTimestamp(value) {
-    if (!value) {
-        return "-";
-    }
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-        return value;
-    }
-
-    return new Intl.DateTimeFormat("uk-UA", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-    }).format(date);
-}
-
-function getStatusClass(status) {
-    switch (status) {
-        case "Completed":
-            return "status-badge status-completed";
-        case "Processing":
-            return "status-badge status-processing";
-        case "Failed":
-            return "status-badge status-failed";
-        default:
-            return "status-badge status-queued";
-    }
-}
-
-function getTaskResult(task) {
-    if (task.status === "Completed" || task.status === "Failed") {
-        return task.result || "-";
-    }
-
-    return "Task is still being processed.";
 }
 
 function countTasksByStatus(tasks, status) {
@@ -88,10 +52,12 @@ export default function Dashboard() {
         () => countTasksByStatus(sortedTasks, "Queued"),
         [sortedTasks],
     );
+
     const processingCount = useMemo(
         () => countTasksByStatus(sortedTasks, "Processing"),
         [sortedTasks],
     );
+
     const completedCount = useMemo(
         () => countTasksByStatus(sortedTasks, "Completed"),
         [sortedTasks],
@@ -192,6 +158,10 @@ export default function Dashboard() {
         setSubmitSuccess("");
     };
 
+    const handlePromptChange = (event) => {
+        setPrompt(event.target.value);
+    };
+
     const handleSubmit = async (event) => {
         event.preventDefault();
         if (!selectedUser || !selectedModel || !prompt.trim()) {
@@ -224,200 +194,52 @@ export default function Dashboard() {
     if (bootLoading) {
         return (
             <div className="dashboard-layout">
-                <aside className="panel control-panel">
-                    <div className="empty-state">Loading dashboard...</div>
-                </aside>
-                <section className="panel task-panel">
-                    <div className="empty-state">Loading tasks...</div>
-                </section>
+                <SectionCard as="aside" className="control-panel">
+                    <EmptyState
+                        title="Loading dashboard"
+                        description="Initial data is being loaded."
+                    />
+                </SectionCard>
+                <SectionCard className="task-panel">
+                    <EmptyState
+                        title="Loading tasks"
+                        description="Task history is being prepared."
+                    />
+                </SectionCard>
             </div>
         );
     }
 
     return (
         <div className="dashboard-layout">
-            <aside className="panel control-panel">
-                <form className="control-form" onSubmit={handleSubmit}>
-                    <section className="control-section">
-                        <label className="field-label" htmlFor="user-select">
-                            User
-                        </label>
-                        <select
-                            id="user-select"
-                            value={selectedUser}
-                            onChange={handleUserChange}
-                            className="field-input"
-                        >
-                            <option value="">Select user</option>
-                            {users.map((user) => (
-                                <option key={user.id} value={user.id}>
-                                    {user.username}
-                                </option>
-                            ))}
-                        </select>
-                    </section>
+            <TaskComposer
+                users={users}
+                models={models}
+                selectedUser={selectedUser}
+                selectedModel={selectedModel}
+                prompt={prompt}
+                currentUser={currentUser}
+                currentModel={currentModel}
+                screenError={screenError}
+                submitError={submitError}
+                submitSuccess={submitSuccess}
+                submitLoading={submitLoading}
+                onUserChange={handleUserChange}
+                onModelChange={handleModelChange}
+                onPromptChange={handlePromptChange}
+                onSubmit={handleSubmit}
+            />
 
-                    <section className="control-section">
-                        <label className="field-label" htmlFor="model-select">
-                            Model
-                        </label>
-                        <select
-                            id="model-select"
-                            value={selectedModel}
-                            onChange={handleModelChange}
-                            className="field-input"
-                        >
-                            <option value="">Select model</option>
-                            {models.map((model) => (
-                                <option key={model.id} value={model.id}>
-                                    {model.name}
-                                </option>
-                            ))}
-                        </select>
-                    </section>
-
-                    <section className="metrics-grid">
-                        <div className="metric-card">
-                            <span className="metric-label">Balance</span>
-                            <span className="metric-value">
-                                {currentUser
-                                    ? currentUser.tokenBalance.toFixed(1)
-                                    : "-"}
-                            </span>
-                        </div>
-                        <div className="metric-card">
-                            <span className="metric-label">Model cost</span>
-                            <span className="metric-value">
-                                {currentModel
-                                    ? currentModel.tokenCost.toFixed(1)
-                                    : "-"}
-                            </span>
-                        </div>
-                    </section>
-
-                    <section className="control-section">
-                        <label className="field-label" htmlFor="prompt-input">
-                            Prompt
-                        </label>
-                        <textarea
-                            id="prompt-input"
-                            value={prompt}
-                            onChange={(event) => setPrompt(event.target.value)}
-                            className="field-input field-textarea"
-                            placeholder="Enter prompt"
-                            disabled={
-                                !selectedUser || !selectedModel || submitLoading
-                            }
-                        />
-                    </section>
-
-                    {screenError && (
-                        <div className="notice notice-error">{screenError}</div>
-                    )}
-                    {submitError && (
-                        <div className="notice notice-error">{submitError}</div>
-                    )}
-                    {submitSuccess && (
-                        <div className="notice notice-success">
-                            {submitSuccess}
-                        </div>
-                    )}
-
-                    <button
-                        type="submit"
-                        className="submit-button"
-                        disabled={
-                            submitLoading ||
-                            !selectedUser ||
-                            !selectedModel ||
-                            !prompt.trim()
-                        }
-                    >
-                        {submitLoading ? "Submitting..." : "Submit"}
-                    </button>
-                </form>
-            </aside>
-
-            <section className="panel task-panel">
-                <div className="task-panel-header">
-                    <div className="task-panel-meta">
-                        <span>Tasks</span>
-                        <span>{sortedTasks.length}</span>
-                    </div>
-                    <div className="task-summary">
-                        <span className="task-summary-item">
-                            Queued {queuedCount}
-                        </span>
-                        <span className="task-summary-item">
-                            Processing {processingCount}
-                        </span>
-                        <span className="task-summary-item">
-                            Completed {completedCount}
-                        </span>
-                    </div>
-                </div>
-
-                {screenError && !selectedUser ? (
-                    <div className="empty-state">{screenError}</div>
-                ) : !selectedUser ? (
-                    <div className="empty-state">
-                        Select a user to view tasks.
-                    </div>
-                ) : taskLoading && sortedTasks.length === 0 ? (
-                    <div className="empty-state">Loading tasks...</div>
-                ) : sortedTasks.length === 0 ? (
-                    <div className="empty-state">
-                        No tasks available for the selected user.
-                    </div>
-                ) : (
-                    <div className="task-list">
-                        {sortedTasks.map((task) => {
-                            const taskModel =
-                                models.find((model) => model.id === task.modelId) ||
-                                null;
-
-                            return (
-                                <article key={task.id} className="task-card">
-                                    <div className="task-card-header">
-                                        <div className="task-title-row">
-                                            <span className={getStatusClass(task.status)}>
-                                                {task.status}
-                                            </span>
-                                            <span className="task-model">
-                                                {taskModel?.name || task.modelId}
-                                            </span>
-                                        </div>
-                                        <span className="task-created-at">
-                                            {formatTimestamp(task.createdAt)}
-                                        </span>
-                                    </div>
-
-                                    <dl className="task-details-grid">
-                                        <div className="task-detail">
-                                            <dt>Task ID</dt>
-                                            <dd>{task.id}</dd>
-                                        </div>
-                                        <div className="task-detail">
-                                            <dt>Model</dt>
-                                            <dd>
-                                                {taskModel?.name || task.modelId}
-                                            </dd>
-                                        </div>
-                                        <div className="task-detail task-detail-wide">
-                                            <dt>Prompt</dt>
-                                            <dd>{task.payload}</dd>
-                                        </div>
-                                        <div className="task-detail task-detail-wide">
-                                            <dt>Result</dt>
-                                            <dd>{getTaskResult(task)}</dd>
-                                        </div>
-                                    </dl>
-                                </article>
-                            );
-                        })}
-                    </div>
-                )}
-            </section>
+            <TaskList
+                models={models}
+                selectedUser={selectedUser}
+                screenError={screenError}
+                taskLoading={taskLoading}
+                sortedTasks={sortedTasks}
+                queuedCount={queuedCount}
+                processingCount={processingCount}
+                completedCount={completedCount}
+            />
         </div>
     );
 }
