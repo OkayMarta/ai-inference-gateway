@@ -66,7 +66,7 @@ func (h *TaskHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 func (h *TaskHandler) GetByUserID(w http.ResponseWriter, r *http.Request) {
 	userID := r.URL.Query().Get("userId")
 	if userID == "" {
-		respondError(w, http.StatusBadRequest, "userId query parameter is required")
+		respondJSON(w, http.StatusOK, h.inference.GetAllTasks())
 		return
 	}
 

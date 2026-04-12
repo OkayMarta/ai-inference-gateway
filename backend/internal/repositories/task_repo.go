@@ -9,7 +9,7 @@ import (
 	"ai-inference-gateway/internal/models"
 )
 
-// TaskRepository зберігає задачі (промпти), які користувачі відправляють на обробку
+// TaskRepository stores prompt tasks submitted for processing.
 type TaskRepository struct {
 	mu    sync.RWMutex
 	tasks map[string]*models.PromptTask
@@ -31,7 +31,24 @@ func (r *TaskRepository) GetByID(id string) (*models.PromptTask, error) {
 	return &cp, nil
 }
 
-// GetByUserID повертає всі задачі конкретного користувача
+func (r *TaskRepository) GetAll() []*models.PromptTask {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	out := make([]*models.PromptTask, 0, len(r.tasks))
+	for _, t := range r.tasks {
+		cp := *t
+		out = append(out, &cp)
+	}
+
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].CreatedAt.After(out[j].CreatedAt)
+	})
+
+	return out
+}
+
+// GetByUserID returns all tasks for a specific user.
 func (r *TaskRepository) GetByUserID(userID string) []*models.PromptTask {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -44,14 +61,14 @@ func (r *TaskRepository) GetByUserID(userID string) []*models.PromptTask {
 		}
 	}
 
-	// Сортуємо задачі від найновіших до найстаріших (по даті створення)
+	// Sort from newest to oldest by creation time.
 	sort.Slice(out, func(i, j int) bool {
 		return out[i].CreatedAt.After(out[j].CreatedAt)
 	})
 	return out
 }
 
-// Create додає нову задачу і автоматично проставляє їй час створення
+// Create adds a new task and stamps its creation time.
 func (r *TaskRepository) Create(task *models.PromptTask) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -60,8 +77,8 @@ func (r *TaskRepository) Create(task *models.PromptTask) {
 	r.tasks[task.ID] = task
 }
 
-// Complete викликається воркером, коли Ollama згенерувала відповідь
-// Змінює статус задачі на Completed і записує результат
+// Complete is called by a worker when processing finishes successfully.
+// It updates the task status to Completed and stores the result.
 func (r *TaskRepository) Complete(id, result string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -88,12 +105,12 @@ func (r *TaskRepository) Fail(id, result string) error {
 	return nil
 }
 
-// GetNextQueued - найхитріша функція. Вона атомарно (за одне блокування) шукає найстарішу задачу в статусі Queued для моделей, які підтримує воркер
+// GetNextQueued atomically finds the oldest queued task supported by the worker.
 func (r *TaskRepository) GetNextQueued(supportedModels []string) *models.PromptTask {
-	r.mu.Lock() // Використовуємо Lock, бо ми одразу змінимо статус знайденої задачі
+	r.mu.Lock() // Use Lock because the status is updated before returning.
 	defer r.mu.Unlock()
 
-	// Перетворюємо масив підтримуваних моделей на мапу для швидкого пошуку
+	// Convert supported model IDs to a set for fast lookups.
 	supported := make(map[string]bool, len(supportedModels))
 	for _, m := range supportedModels {
 		supported[m] = true
@@ -101,23 +118,23 @@ func (r *TaskRepository) GetNextQueued(supportedModels []string) *models.PromptT
 
 	var oldest *models.PromptTask
 
-	// Перебираємо всі задачі
+	// Scan all tasks.
 	for _, t := range r.tasks {
-		// Якщо задача не в черзі АБО модель не підтримується цим воркером - пропускаємо
+		// Skip tasks that are not queued or not supported by this worker.
 		if t.Status != models.StatusQueued || !supported[t.ModelID] {
 			continue
 		}
-		// Шукаємо задачу з найменшим часом (найстарішу)
+		// Track the oldest matching task.
 		if oldest == nil || t.CreatedAt.Before(oldest.CreatedAt) {
 			oldest = t
 		}
 	}
 
-	// Якщо знайшли задачу, одразу переводимо її в статус "В обробці" (Processing)
+	// Move the selected task to Processing before returning it.
 	if oldest != nil {
 		oldest.Status = models.StatusProcessing
 		cp := *oldest
-		return &cp // Повертаємо воркеру копію задачі для виконання
+		return &cp // Return a copy for worker processing.
 	}
 	return nil
 }

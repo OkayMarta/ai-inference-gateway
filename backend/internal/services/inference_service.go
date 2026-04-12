@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"ai-inference-gateway/internal/models"
-	"ai-inference-gateway/internal/repositories"
 )
 
 var (
@@ -16,19 +15,19 @@ var (
 	ErrInsufficientBalance = errors.New("insufficient token balance")
 )
 
-// InferenceService — це ядро системи (білінг + оркестрація). Він об'єднує роботу одразу 4-х репозиторіїв
+// InferenceService coordinates billing and task orchestration.
 type InferenceService struct {
-	userRepo  *repositories.UserRepository
-	modelRepo *repositories.ModelRepository
-	taskRepo  *repositories.TaskRepository
-	txRepo    *repositories.TransactionRepository
+	userRepo  UserRepository
+	modelRepo ModelRepository
+	taskRepo  TaskRepository
+	txRepo    TransactionRepository
 }
 
 func NewInferenceService(
-	userRepo *repositories.UserRepository,
-	modelRepo *repositories.ModelRepository,
-	taskRepo *repositories.TaskRepository,
-	txRepo *repositories.TransactionRepository,
+	userRepo UserRepository,
+	modelRepo ModelRepository,
+	taskRepo TaskRepository,
+	txRepo TransactionRepository,
 ) *InferenceService {
 	return &InferenceService{
 		userRepo:  userRepo,
@@ -38,39 +37,32 @@ func NewInferenceService(
 	}
 }
 
-// generateID створює унікальний випадковий рядок для ID (замість автоінкременту БД)
 func generateID() string {
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
 }
 
-// SubmitPrompt — це головний бізнес-сценарій: перевірка балансу → списання → створення транзакції → створення задачі
 func (s *InferenceService) SubmitPrompt(userID, modelID, payload string) (*models.PromptTask, error) {
-	// 1. Шукаємо користувача. Якщо його немає — повертаємо помилку 404/422
 	user, err := s.userRepo.GetByID(userID)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrUserNotFound, userID)
 	}
 
-	// 2. Шукаємо модель. Нам потрібно знати її вартість (TokenCost)
 	model, err := s.modelRepo.GetByID(modelID)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrModelNotFound, modelID)
 	}
 
-	// 3. БІЗНЕС-ПРАВИЛО: Перевіряємо, чи вистачає у юзера грошей (токенів)
 	if user.TokenBalance < model.TokenCost {
 		return nil, fmt.Errorf("%w: have %.2f, need %.2f", ErrInsufficientBalance,
 			user.TokenBalance, model.TokenCost)
 	}
 
-	// 4. Списуємо токени: оновлюємо баланс користувача
 	if err := s.userRepo.UpdateBalance(userID, user.TokenBalance-model.TokenCost); err != nil {
 		return nil, fmt.Errorf("failed to update balance: %w", err)
 	}
 
-	// 5. Створюємо задачу (PromptTask). Статус обов'язково "Queued" (У черзі), бо ми ще не відправили її в Ollama. Це зробить фоновий Worker.
 	task := &models.PromptTask{
 		ID:      generateID(),
 		UserID:  userID,
@@ -80,7 +72,6 @@ func (s *InferenceService) SubmitPrompt(userID, modelID, payload string) (*model
 	}
 	s.taskRepo.Create(task)
 
-	// 6. Створюємо запис про транзакцію (чек про оплату)
 	tx := &models.Transaction{
 		ID:     generateID(),
 		UserID: userID,
@@ -89,16 +80,17 @@ func (s *InferenceService) SubmitPrompt(userID, modelID, payload string) (*model
 	}
 	s.txRepo.Create(tx)
 
-	// 7. Повертаємо створену задачу (щоб контролер міг віддати її користувачу у форматі JSON)
 	return task, nil
 }
 
-// GetTaskByID дозволяє перевірити статус конкретної задачі
 func (s *InferenceService) GetTaskByID(id string) (*models.PromptTask, error) {
 	return s.taskRepo.GetByID(id)
 }
 
-// GetTasksByUserID повертає історію задач конкретного користувача
+func (s *InferenceService) GetAllTasks() []*models.PromptTask {
+	return s.taskRepo.GetAll()
+}
+
 func (s *InferenceService) GetTasksByUserID(userID string) []*models.PromptTask {
 	return s.taskRepo.GetByUserID(userID)
 }

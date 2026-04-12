@@ -8,20 +8,19 @@ import (
 	"time"
 
 	"ai-inference-gateway/internal/models"
-	"ai-inference-gateway/internal/repositories"
 )
 
 type WorkerService struct {
-	workerRepo *repositories.WorkerRepository
-	taskRepo   *repositories.TaskRepository
-	modelRepo  *repositories.ModelRepository
+	workerRepo WorkerRepository
+	taskRepo   TaskRepository
+	modelRepo  ModelRepository
 	ollama     *OllamaClient
 }
 
 func NewWorkerService(
-	workerRepo *repositories.WorkerRepository,
-	taskRepo *repositories.TaskRepository,
-	modelRepo *repositories.ModelRepository,
+	workerRepo WorkerRepository,
+	taskRepo TaskRepository,
+	modelRepo ModelRepository,
 	ollama *OllamaClient,
 ) *WorkerService {
 	return &WorkerService{
