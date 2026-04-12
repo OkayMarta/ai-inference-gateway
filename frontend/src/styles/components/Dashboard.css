@@ -61,8 +61,11 @@
 }
 
 .field-textarea {
+    height: 144px;
     min-height: 144px;
-    resize: vertical;
+    max-height: 144px;
+    resize: none;
+    overflow-y: auto;
 }
 
 .metrics-grid {
