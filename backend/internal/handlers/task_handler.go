@@ -63,7 +63,7 @@ func (h *TaskHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, task)
 }
 
-func (h *TaskHandler) GetByUserID(w http.ResponseWriter, r *http.Request) {
+func (h *TaskHandler) List(w http.ResponseWriter, r *http.Request) {
 	userID := r.URL.Query().Get("userId")
 	if userID == "" {
 		respondJSON(w, http.StatusOK, h.inference.GetAllTasks())

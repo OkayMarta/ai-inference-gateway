@@ -66,7 +66,7 @@ func main() {
 
 		r.Post("/tasks", taskH.Submit)
 		r.Get("/tasks/{id}", taskH.GetByID)
-		r.Get("/tasks", taskH.GetByUserID)
+		r.Get("/tasks", taskH.List)
 	})
 
 	// Server start
