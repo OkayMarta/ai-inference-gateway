@@ -23,10 +23,18 @@ func NewTaskRepository(db *sql.DB) *TaskRepository {
 }
 
 func (r *TaskRepository) GetByID(id string) (*models.PromptTask, error) {
+	return r.getByID(r.db, id)
+}
+
+func (r *TaskRepository) GetByIDTx(tx appdb.DBTX, id string) (*models.PromptTask, error) {
+	return r.getByID(tx, id)
+}
+
+func (r *TaskRepository) getByID(exec appdb.DBTX, id string) (*models.PromptTask, error) {
 	task := &models.PromptTask{}
 	var result sql.NullString
 
-	err := r.db.QueryRow(`
+	err := exec.QueryRow(`
 		SELECT id, user_id, model_id, payload, status, result, created_at
 		FROM prompt_tasks
 		WHERE id = $1
@@ -145,7 +153,15 @@ func (r *TaskRepository) create(exec appdb.DBTX, task *models.PromptTask) error 
 }
 
 func (r *TaskRepository) Update(task *models.PromptTask) error {
-	result, err := r.db.Exec(`
+	return r.update(r.db, task)
+}
+
+func (r *TaskRepository) UpdateTx(tx appdb.DBTX, task *models.PromptTask) error {
+	return r.update(tx, task)
+}
+
+func (r *TaskRepository) update(exec appdb.DBTX, task *models.PromptTask) error {
+	result, err := exec.Exec(`
 		UPDATE prompt_tasks
 		SET user_id = $2,
 		    model_id = $3,

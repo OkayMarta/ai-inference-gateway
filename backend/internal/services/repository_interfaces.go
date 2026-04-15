@@ -43,10 +43,12 @@ type ModelRepository interface {
 // List(filter) є єдиною точкою для отримання колекцій задач замість кількох вузькоспеціалізованих методів на кшталт GetAll/GetByUserID.
 type TaskRepository interface {
 	GetByID(id string) (*models.PromptTask, error)
+	GetByIDTx(tx appdb.DBTX, id string) (*models.PromptTask, error)
 	List(filter TaskListFilter) ([]*models.PromptTask, error)
 	Create(task *models.PromptTask) error
 	CreateTx(tx appdb.DBTX, task *models.PromptTask) error
 	Update(task *models.PromptTask) error
+	UpdateTx(tx appdb.DBTX, task *models.PromptTask) error
 	Delete(id string) error
 	Complete(id, result string) error
 	Fail(id, result string) error

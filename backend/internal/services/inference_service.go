@@ -165,8 +165,14 @@ func (s *InferenceService) UpdateTaskPayload(id string, payload string) (*models
 }
 
 func (s *InferenceService) CancelTask(id string) (*models.PromptTask, error) {
-	task, err := s.taskRepo.GetByID(id)
+	tx, err := s.db.BeginTx(context.Background(), nil)
 	if err != nil {
+		return nil, fmt.Errorf("begin cancel task transaction: %w", err)
+	}
+
+	task, err := s.taskRepo.GetByIDTx(tx, id)
+	if err != nil {
+		_ = tx.Rollback()
 		if isRepoNotFoundError(err, "task not found:") {
 			return nil, ErrTaskNotFound
 		}
@@ -174,19 +180,22 @@ func (s *InferenceService) CancelTask(id string) (*models.PromptTask, error) {
 	}
 
 	if task.Status != models.StatusQueued {
+		_ = tx.Rollback()
 		return nil, ErrTaskCannotBeDeleted
 	}
 
-	model, err := s.modelRepo.GetByID(task.ModelID)
+	model, err := s.modelRepo.GetByIDTx(tx, task.ModelID)
 	if err != nil {
+		_ = tx.Rollback()
 		if isRepoNotFoundError(err, "model not found:") {
 			return nil, ErrModelNotFound
 		}
 		return nil, err
 	}
 
-	user, err := s.userRepo.GetByID(task.UserID)
+	user, err := s.userRepo.GetByIDTx(tx, task.UserID)
 	if err != nil {
+		_ = tx.Rollback()
 		if isRepoNotFoundError(err, "user not found:") {
 			return nil, ErrUserNotFound
 		}
@@ -194,13 +203,15 @@ func (s *InferenceService) CancelTask(id string) (*models.PromptTask, error) {
 	}
 
 	newBalance := user.TokenBalance + model.TokenCost
-	if err := s.userRepo.UpdateBalance(user.ID, newBalance); err != nil {
+	if err := s.userRepo.UpdateBalanceTx(tx, user.ID, newBalance); err != nil {
+		_ = tx.Rollback()
 		return nil, fmt.Errorf("failed to refund balance: %w", err)
 	}
 
 	task.Status = models.StatusCancelled
 	task.Result = "Task was cancelled"
-	if err := s.taskRepo.Update(task); err != nil {
+	if err := s.taskRepo.UpdateTx(tx, task); err != nil {
+		_ = tx.Rollback()
 		if isRepoNotFoundError(err, "task not found:") {
 			return nil, ErrTaskNotFound
 		}
@@ -214,8 +225,13 @@ func (s *InferenceService) CancelTask(id string) (*models.PromptTask, error) {
 		Amount: model.TokenCost,
 		Type:   "refund",
 	}
-	if err := s.txRepo.Create(refundTx); err != nil {
+	if err := s.txRepo.CreateTx(tx, refundTx); err != nil {
+		_ = tx.Rollback()
 		return nil, fmt.Errorf("failed to create refund transaction: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit cancel task transaction: %w", err)
 	}
 
 	return task, nil
