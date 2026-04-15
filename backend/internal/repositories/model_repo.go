@@ -82,6 +82,34 @@ func (r *ModelRepository) Create(model *models.AIModel) error {
 	return nil
 }
 
+func (r *ModelRepository) ReplaceAll(models []*models.AIModel) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin replace models transaction: %w", err)
+	}
+
+	if _, err := tx.Exec(`DELETE FROM ai_models`); err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("clear models: %w", err)
+	}
+
+	for _, model := range models {
+		if _, err := tx.Exec(`
+			INSERT INTO ai_models (id, name, description, token_cost)
+			VALUES ($1, $2, $3, $4)
+		`, model.ID, model.Name, model.Description, model.TokenCost); err != nil {
+			_ = tx.Rollback()
+			return fmt.Errorf("insert synced model %s: %w", model.ID, err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit replace models transaction: %w", err)
+	}
+
+	return nil
+}
+
 func (r *ModelRepository) Update(model *models.AIModel) error {
 	result, err := r.db.Exec(`
 		UPDATE ai_models

@@ -35,6 +35,7 @@ type ModelRepository interface {
 	GetByID(id string) (*models.AIModel, error)
 	GetByIDTx(tx appdb.DBTX, id string) (*models.AIModel, error)
 	Create(model *models.AIModel) error
+	ReplaceAll(models []*models.AIModel) error
 	Update(model *models.AIModel) error
 	Delete(id string) error
 }

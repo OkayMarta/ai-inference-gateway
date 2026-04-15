@@ -35,7 +35,7 @@ func main() {
 	ollama := services.NewOllamaClient("http://localhost:11434")
 
 	userSvc := services.NewUserService(userRepo)
-	modelSvc := services.NewModelService(modelRepo)
+	modelSvc := services.NewModelService(modelRepo, ollama)
 	inferenceSvc := services.NewInferenceService(postgresDB, userRepo, modelRepo, taskRepo, txRepo)
 	workerSvc := services.NewWorkerService(workerRepo, taskRepo, modelRepo, ollama)
 	workerSvc.Start()
