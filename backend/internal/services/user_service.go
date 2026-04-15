@@ -15,6 +15,6 @@ func (s *UserService) GetByID(id string) (*models.User, error) {
 	return s.repo.GetByID(id)
 }
 
-func (s *UserService) GetAll() []*models.User {
+func (s *UserService) GetAll() ([]*models.User, error) {
 	return s.repo.GetAll()
 }

@@ -70,7 +70,9 @@ func (s *InferenceService) SubmitPrompt(userID, modelID, payload string) (*model
 		Payload: payload,
 		Status:  models.StatusQueued,
 	}
-	s.taskRepo.Create(task)
+	if err := s.taskRepo.Create(task); err != nil {
+		return nil, fmt.Errorf("failed to create task: %w", err)
+	}
 
 	tx := &models.Transaction{
 		ID:     generateID(),
@@ -78,7 +80,9 @@ func (s *InferenceService) SubmitPrompt(userID, modelID, payload string) (*model
 		TaskID: task.ID,
 		Amount: model.TokenCost,
 	}
-	s.txRepo.Create(tx)
+	if err := s.txRepo.Create(tx); err != nil {
+		return nil, fmt.Errorf("failed to create transaction: %w", err)
+	}
 
 	return task, nil
 }
@@ -87,10 +91,14 @@ func (s *InferenceService) GetTaskByID(id string) (*models.PromptTask, error) {
 	return s.taskRepo.GetByID(id)
 }
 
-func (s *InferenceService) GetAllTasks() []*models.PromptTask {
-	return s.taskRepo.GetAll()
+func (s *InferenceService) ListTasks(filter TaskListFilter) ([]*models.PromptTask, error) {
+	return s.taskRepo.List(filter)
 }
 
-func (s *InferenceService) GetTasksByUserID(userID string) []*models.PromptTask {
-	return s.taskRepo.GetByUserID(userID)
+func (s *InferenceService) GetAllTasks() ([]*models.PromptTask, error) {
+	return s.ListTasks(TaskListFilter{})
+}
+
+func (s *InferenceService) GetTasksByUserID(userID string) ([]*models.PromptTask, error) {
+	return s.ListTasks(TaskListFilter{UserID: userID})
 }

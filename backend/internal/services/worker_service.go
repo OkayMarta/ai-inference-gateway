@@ -42,9 +42,18 @@ func (s *WorkerService) Start() {
 }
 
 func (s *WorkerService) processNext() {
-	workers := s.workerRepo.GetIdle()
+	workers, err := s.workerRepo.GetIdle()
+	if err != nil {
+		log.Printf("[WorkerService] Failed to load idle workers: %v", err)
+		return
+	}
+
 	for _, w := range workers {
-		task := s.taskRepo.GetNextQueued(w.SupportedModels)
+		task, err := s.taskRepo.GetNextQueued(w.SupportedModels)
+		if err != nil {
+			log.Printf("[WorkerService] Failed to fetch next queued task for worker %s: %v", w.ID, err)
+			continue
+		}
 		if task == nil {
 			continue
 		}

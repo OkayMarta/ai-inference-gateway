@@ -16,5 +16,11 @@ func NewModelHandler(s *services.ModelService) *ModelHandler {
 
 // GetAll обробляє запит GET /api/models
 func (h *ModelHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-	respondJSON(w, http.StatusOK, h.service.GetAll())
+	models, err := h.service.GetAll()
+	if err != nil {
+		respondError(w, r, http.StatusInternalServerError, "Internal server error")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, models)
 }

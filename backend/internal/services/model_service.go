@@ -11,7 +11,7 @@ func NewModelService(repo ModelRepository) *ModelService {
 	return &ModelService{repo: repo}
 }
 
-func (s *ModelService) GetAll() []*models.AIModel {
+func (s *ModelService) GetAll() ([]*models.AIModel, error) {
 	return s.repo.GetAll()
 }
 

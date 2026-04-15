@@ -67,10 +67,21 @@ func (h *TaskHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 func (h *TaskHandler) List(w http.ResponseWriter, r *http.Request) {
 	userID := r.URL.Query().Get("userId")
 	if userID == "" {
-		respondJSON(w, http.StatusOK, h.inference.GetAllTasks())
+		tasks, err := h.inference.GetAllTasks()
+		if err != nil {
+			respondError(w, r, http.StatusInternalServerError, "Internal server error")
+			return
+		}
+
+		respondJSON(w, http.StatusOK, tasks)
 		return
 	}
 
-	tasks := h.inference.GetTasksByUserID(userID)
+	tasks, err := h.inference.GetTasksByUserID(userID)
+	if err != nil {
+		respondError(w, r, http.StatusInternalServerError, "Internal server error")
+		return
+	}
+
 	respondJSON(w, http.StatusOK, tasks)
 }

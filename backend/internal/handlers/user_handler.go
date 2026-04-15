@@ -18,7 +18,13 @@ func NewUserHandler(s *services.UserService) *UserHandler {
 
 // GetAll обробляє запит GET /api/users
 func (h *UserHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-	respondJSON(w, http.StatusOK, h.service.GetAll())
+	users, err := h.service.GetAll()
+	if err != nil {
+		respondError(w, r, http.StatusInternalServerError, "Internal server error")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, users)
 }
 
 // GetByID обробляє запит GET /api/users/{id}
