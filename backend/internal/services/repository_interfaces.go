@@ -72,6 +72,7 @@ type WorkerRepository interface {
 	Create(worker *models.WorkerNode) error
 	Update(worker *models.WorkerNode) error
 	UpdateStatus(id string, status models.WorkerStatus) error
+	ReplaceSupportedModelsForAllWorkers(modelIDs []string) error
 	Delete(id string) error
 }
 

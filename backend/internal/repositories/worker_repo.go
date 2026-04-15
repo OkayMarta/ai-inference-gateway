@@ -183,6 +183,66 @@ func (r *WorkerRepository) UpdateStatus(id string, status models.WorkerStatus) e
 	return nil
 }
 
+func (r *WorkerRepository) ReplaceSupportedModelsForAllWorkers(modelIDs []string) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin worker model mappings transaction: %w", err)
+	}
+
+	if _, err := tx.Exec(`
+		DELETE FROM worker_supported_models
+	`); err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("clear worker model mappings: %w", err)
+	}
+
+	rows, err := tx.Query(`
+		SELECT id
+		FROM worker_nodes
+		ORDER BY id
+	`)
+	if err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("list workers for model mapping refresh: %w", err)
+	}
+
+	var workerIDs []string
+	for rows.Next() {
+		var workerID string
+		if err := rows.Scan(&workerID); err != nil {
+			rows.Close()
+			_ = tx.Rollback()
+			return fmt.Errorf("scan worker for model mapping refresh: %w", err)
+		}
+		workerIDs = append(workerIDs, workerID)
+	}
+
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		_ = tx.Rollback()
+		return fmt.Errorf("iterate workers for model mapping refresh: %w", err)
+	}
+	rows.Close()
+
+	for _, workerID := range workerIDs {
+		for _, modelID := range modelIDs {
+			if _, err := tx.Exec(`
+				INSERT INTO worker_supported_models (worker_id, model_id)
+				VALUES ($1, $2)
+			`, workerID, modelID); err != nil {
+				_ = tx.Rollback()
+				return fmt.Errorf("add model mapping worker=%s model=%s: %w", workerID, modelID, err)
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit worker model mappings transaction: %w", err)
+	}
+
+	return nil
+}
+
 func (r *WorkerRepository) Delete(id string) error {
 	result, err := r.db.Exec(`
 		DELETE FROM worker_nodes

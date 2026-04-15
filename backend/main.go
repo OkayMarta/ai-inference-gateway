@@ -36,6 +36,7 @@ func main() {
 
 	userSvc := services.NewUserService(userRepo)
 	modelSvc := services.NewModelService(modelRepo, ollama)
+	workerSvc := services.NewWorkerService(workerRepo, taskRepo, modelRepo, ollama)
 
 	log.Println("synchronizing models from Ollama...")
 	if err := modelSvc.SyncFromOllama(); err != nil {
@@ -47,10 +48,16 @@ func main() {
 		} else {
 			log.Printf("successfully synchronized %d models from Ollama", len(syncedModels))
 		}
+
+		log.Println("refreshing worker/model mappings...")
+		if err := workerSvc.RefreshSupportedModels(); err != nil {
+			log.Printf("failed to refresh worker/model mappings: %v", err)
+		} else {
+			log.Println("successfully refreshed worker/model mappings")
+		}
 	}
 
 	inferenceSvc := services.NewInferenceService(postgresDB, userRepo, modelRepo, taskRepo, txRepo)
-	workerSvc := services.NewWorkerService(workerRepo, taskRepo, modelRepo, ollama)
 	workerSvc.Start()
 
 	userH := handlers.NewUserHandler(userSvc)

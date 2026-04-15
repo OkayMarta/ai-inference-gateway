@@ -40,6 +40,27 @@ func (s *WorkerService) Start() {
 	}()
 }
 
+// RefreshSupportedModels синхронізує persisted mapping між воркерами та моделями.
+// Для Lab 3 всі воркери підтримують усі доступні моделі, але цей зв'язок
+// має зберігатися явно в PostgreSQL, а не лише припускатися в пам'яті.
+func (s *WorkerService) RefreshSupportedModels() error {
+	modelsList, err := s.modelRepo.GetAll()
+	if err != nil {
+		return fmt.Errorf("load models for worker mapping refresh: %w", err)
+	}
+
+	modelIDs := make([]string, 0, len(modelsList))
+	for _, model := range modelsList {
+		modelIDs = append(modelIDs, model.ID)
+	}
+
+	if err := s.workerRepo.ReplaceSupportedModelsForAllWorkers(modelIDs); err != nil {
+		return fmt.Errorf("replace worker model mappings: %w", err)
+	}
+
+	return nil
+}
+
 func (s *WorkerService) processNext() {
 	workers, err := s.workerRepo.GetIdle()
 	if err != nil {
