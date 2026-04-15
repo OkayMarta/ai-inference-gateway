@@ -38,6 +38,8 @@ const TaskList = ({
     queuedCount,
     processingCount,
     completedCount,
+    failedCount,
+    cancelledCount,
     statusFilter,
     onStatusFilterChange,
     onCancelTask,
@@ -50,6 +52,28 @@ const TaskList = ({
             <span className="task-summary-item">Queued {queuedCount}</span>
             <span className="task-summary-item">Processing {processingCount}</span>
             <span className="task-summary-item">Completed {completedCount}</span>
+            <span className="task-summary-item">Failed {failedCount}</span>
+            <span className="task-summary-item">Cancelled {cancelledCount}</span>
+        </div>
+    );
+    const filterControls = (
+        <div className="task-list-controls">
+            <label className="field-label task-filter-label" htmlFor="task-status-filter">
+                Status
+            </label>
+            <select
+                id="task-status-filter"
+                value={statusFilter}
+                onChange={onStatusFilterChange}
+                className="field-input task-filter-select"
+            >
+                <option value="">All</option>
+                <option value="Queued">Queued</option>
+                <option value="Processing">Processing</option>
+                <option value="Completed">Completed</option>
+                <option value="Failed">Failed</option>
+                <option value="Cancelled">Cancelled</option>
+            </select>
         </div>
     );
 
@@ -66,103 +90,87 @@ const TaskList = ({
                 description="Select a user to view tasks."
             />
         );
-    } else if (taskLoading && sortedTasks.length === 0) {
-        content = (
-            <EmptyState title="Loading tasks" description="Task history is being loaded." />
-        );
-    } else if (screenError && sortedTasks.length === 0) {
-        content = (
-            <EmptyState title="Unable to load tasks" description={screenError} />
-        );
-    } else if (sortedTasks.length === 0) {
-        content = (
-            <EmptyState
-                title="No tasks available"
-                description="The selected user has no tasks yet."
-            />
-        );
     } else {
         content = (
-                <div className="task-list-stack">
-                    {screenError && (
-                        <div className="notice notice-error notice-quiet">
-                            {screenError}
-                        </div>
-                    )}
-                    <div className="task-list-controls">
-                        <label className="field-label task-filter-label" htmlFor="task-status-filter">
-                            Status
-                        </label>
-                        <select
-                            id="task-status-filter"
-                            value={statusFilter}
-                            onChange={onStatusFilterChange}
-                            className="field-input task-filter-select"
-                        >
-                            <option value="">All</option>
-                            <option value="Queued">Queued</option>
-                            <option value="Processing">Processing</option>
-                            <option value="Completed">Completed</option>
-                            <option value="Failed">Failed</option>
-                            <option value="Cancelled">Cancelled</option>
-                        </select>
+            <div className="task-list-stack">
+                {screenError && (
+                    <div className="notice notice-error notice-quiet">
+                        {screenError}
                     </div>
+                )}
+                {filterControls}
+                {taskLoading && sortedTasks.length === 0 ? (
+                    <EmptyState
+                        title="Loading tasks"
+                        description="Task history is being loaded."
+                    />
+                ) : sortedTasks.length === 0 ? (
+                    <EmptyState
+                        title="No tasks available"
+                        description={
+                            statusFilter
+                                ? "No tasks match the selected status filter."
+                                : "The selected user has no tasks yet."
+                        }
+                    />
+                ) : (
                     <div className="task-list">
                         {sortedTasks.map((task) => {
                             const taskModel =
                                 models.find((model) => model.id === task.modelId) || null;
 
-                        return (
-                            <article key={task.id} className="task-card">
-                                <div className="task-card-header">
-                                    <div className="task-title-row">
-                                        <StatusBadge status={task.status} />
-                                        <span className="task-model">
-                                            {taskModel?.name || task.modelId}
+                            return (
+                                <article key={task.id} className="task-card">
+                                    <div className="task-card-header">
+                                        <div className="task-title-row">
+                                            <StatusBadge status={task.status} />
+                                            <span className="task-model">
+                                                {taskModel?.name || task.modelId}
+                                            </span>
+                                        </div>
+                                        <span className="task-created-at">
+                                            {formatTimestamp(task.createdAt)}
                                         </span>
                                     </div>
-                                    <span className="task-created-at">
-                                        {formatTimestamp(task.createdAt)}
-                                    </span>
-                                </div>
 
-                                {task.status === "Queued" && (
-                                    <div className="task-card-actions">
-                                        <button
-                                            type="button"
-                                            className="task-action-button"
-                                            onClick={() => onCancelTask(task.id)}
-                                            disabled={cancelLoadingTaskId === task.id}
-                                        >
-                                            {cancelLoadingTaskId === task.id
-                                                ? "Cancelling..."
-                                                : "Cancel"}
-                                        </button>
-                                    </div>
-                                )}
+                                    {task.status === "Queued" && (
+                                        <div className="task-card-actions">
+                                            <button
+                                                type="button"
+                                                className="task-action-button"
+                                                onClick={() => onCancelTask(task.id)}
+                                                disabled={cancelLoadingTaskId === task.id}
+                                            >
+                                                {cancelLoadingTaskId === task.id
+                                                    ? "Cancelling..."
+                                                    : "Cancel"}
+                                            </button>
+                                        </div>
+                                    )}
 
-                                <dl className="task-details-grid">
-                                    <div className="task-detail">
-                                        <dt>Task ID</dt>
-                                        <dd>{task.id}</dd>
-                                    </div>
-                                    <div className="task-detail">
-                                        <dt>Model</dt>
-                                        <dd>{taskModel?.name || task.modelId}</dd>
-                                    </div>
-                                    <div className="task-detail task-detail-wide">
-                                        <dt>Prompt</dt>
-                                        <dd>{task.payload}</dd>
-                                    </div>
-                                    <div className="task-detail task-detail-wide">
-                                        <dt>Result</dt>
-                                        <dd>{getTaskResult(task)}</dd>
-                                    </div>
-                                </dl>
-                            </article>
-                        );
-                    })}
-                </div>
+                                    <dl className="task-details-grid">
+                                        <div className="task-detail">
+                                            <dt>Task ID</dt>
+                                            <dd>{task.id}</dd>
+                                        </div>
+                                        <div className="task-detail">
+                                            <dt>Model</dt>
+                                            <dd>{taskModel?.name || task.modelId}</dd>
+                                        </div>
+                                        <div className="task-detail task-detail-wide">
+                                            <dt>Prompt</dt>
+                                            <dd>{task.payload}</dd>
+                                        </div>
+                                        <div className="task-detail task-detail-wide">
+                                            <dt>Result</dt>
+                                            <dd>{getTaskResult(task)}</dd>
+                                        </div>
+                                    </dl>
+                                </article>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
         );
     }
@@ -174,10 +182,7 @@ const TaskList = ({
             rightSlot={
                 <div className="task-panel-toolbar">
                     {hasSelectedUser ? (
-                        <>
-                            <div className="task-panel-count">{sortedTasks.length}</div>
-                            {taskSummary}
-                        </>
+                        taskSummary
                     ) : (
                         <div className="task-panel-helper">
                             Select a user to see tasks

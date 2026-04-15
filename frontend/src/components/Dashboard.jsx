@@ -66,6 +66,14 @@ const Dashboard = () => {
         () => countTasksByStatus(sortedTasks, "Completed"),
         [sortedTasks],
     );
+    const failedCount = useMemo(
+        () => countTasksByStatus(sortedTasks, "Failed"),
+        [sortedTasks],
+    );
+    const cancelledCount = useMemo(
+        () => countTasksByStatus(sortedTasks, "Cancelled"),
+        [sortedTasks],
+    );
 
     const hasBootData = users.length > 0 || models.length > 0;
     const composerScreenError = !hasBootData ? screenError : "";
@@ -117,8 +125,10 @@ const Dashboard = () => {
 
         let active = true;
 
-        const refreshUserData = async () => {
-            setTaskLoading(true);
+        const refreshUserData = async (showLoadingState = false) => {
+            if (showLoadingState) {
+                setTaskLoading(true);
+            }
             setScreenError("");
 
             try {
@@ -144,14 +154,16 @@ const Dashboard = () => {
                     setScreenError(error.message);
                 }
             } finally {
-                if (active) {
+                if (active && showLoadingState) {
                     setTaskLoading(false);
                 }
             }
         };
 
-        refreshUserData();
-        const intervalId = setInterval(refreshUserData, 2000);
+        refreshUserData(true);
+        const intervalId = setInterval(() => {
+            refreshUserData(false);
+        }, 2000);
 
         return () => {
             active = false;
@@ -305,6 +317,8 @@ const Dashboard = () => {
                 queuedCount={queuedCount}
                 processingCount={processingCount}
                 completedCount={completedCount}
+                failedCount={failedCount}
+                cancelledCount={cancelledCount}
                 statusFilter={statusFilter}
                 onStatusFilterChange={handleStatusFilterChange}
                 onCancelTask={handleCancelTask}
