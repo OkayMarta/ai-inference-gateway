@@ -117,6 +117,12 @@
     color: var(--color-success-text);
 }
 
+.notice-warning {
+    border-color: rgba(250, 204, 21, 0.24);
+    background: rgba(250, 204, 21, 0.1);
+    color: #fde68a;
+}
+
 .notice-quiet {
     border-color: rgba(248, 113, 113, 0.16);
     background: rgba(248, 113, 113, 0.08);

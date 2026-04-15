@@ -3,6 +3,7 @@ import SectionCard from "./SectionCard";
 const TaskComposer = ({
     users,
     models,
+    hasAvailableModels,
     selectedUserId,
     selectedModelId,
     prompt,
@@ -17,6 +18,9 @@ const TaskComposer = ({
     onPromptChange,
     onSubmit,
 }) => {
+    const noModelsNotice =
+        "Немає доступних моделей. Переконайтеся, що Ollama запущена і має завантажені моделі.";
+
     return (
         <SectionCard as="aside" className="control-panel">
             <form className="control-form" onSubmit={onSubmit}>
@@ -48,8 +52,13 @@ const TaskComposer = ({
                         value={selectedModelId}
                         onChange={onModelChange}
                         className="field-input"
+                        disabled={!hasAvailableModels}
                     >
-                        <option value="">Select model</option>
+                        <option value="">
+                            {hasAvailableModels
+                                ? "Select model"
+                                : "No models available"}
+                        </option>
                         {models.map((model) => (
                             <option key={model.id} value={model.id}>
                                 {model.name}
@@ -82,13 +91,23 @@ const TaskComposer = ({
                         value={prompt}
                         onChange={onPromptChange}
                         className="field-input field-textarea"
-                        placeholder="Enter prompt"
+                        placeholder={
+                            hasAvailableModels
+                                ? "Enter prompt"
+                                : "Task submission is unavailable without models"
+                        }
                         disabled={
-                            !selectedUserId || !selectedModelId || submitLoading
+                            !hasAvailableModels ||
+                            !selectedUserId ||
+                            !selectedModelId ||
+                            submitLoading
                         }
                     />
                 </section>
 
+                {!hasAvailableModels && (
+                    <div className="notice notice-warning">{noModelsNotice}</div>
+                )}
                 {screenError && <div className="notice notice-error">{screenError}</div>}
                 {submitError && <div className="notice notice-error">{submitError}</div>}
                 {submitSuccess && (
@@ -100,6 +119,7 @@ const TaskComposer = ({
                     className="submit-button"
                     disabled={
                         submitLoading ||
+                        !hasAvailableModels ||
                         !selectedUserId ||
                         !selectedModelId ||
                         !prompt.trim()

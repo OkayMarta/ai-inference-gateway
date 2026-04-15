@@ -41,6 +41,7 @@ const Dashboard = () => {
         () => models.find((model) => model.id === selectedModelId) || null,
         [models, selectedModelId],
     );
+    const hasAvailableModels = models.length > 0;
 
     const sortedTasks = useMemo(
         () =>
@@ -279,6 +280,7 @@ const Dashboard = () => {
             <TaskComposer
                 users={users}
                 models={models}
+                hasAvailableModels={hasAvailableModels}
                 selectedUserId={selectedUserId}
                 selectedModelId={selectedModelId}
                 prompt={prompt}
