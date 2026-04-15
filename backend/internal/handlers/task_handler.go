@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
@@ -119,24 +120,42 @@ func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TaskHandler) List(w http.ResponseWriter, r *http.Request) {
-	userID := r.URL.Query().Get("userId")
-	if userID == "" {
-		tasks, err := h.inference.GetAllTasks()
-		if err != nil {
-			status := mapErrorToStatus(err)
-			message := err.Error()
-			if status == http.StatusInternalServerError {
-				message = "internal server error"
-			}
-			respondError(w, r, status, message)
+	query := r.URL.Query()
+
+	limit := 20
+	if rawLimit := query.Get("limit"); rawLimit != "" {
+		parsedLimit, err := strconv.Atoi(rawLimit)
+		if err != nil || parsedLimit <= 0 {
+			respondError(w, r, http.StatusBadRequest, services.ErrInvalidPagination.Error())
 			return
 		}
-
-		respondJSON(w, http.StatusOK, tasks)
-		return
+		limit = parsedLimit
 	}
 
-	tasks, err := h.inference.GetTasksByUserID(userID)
+	offset := 0
+	if rawOffset := query.Get("offset"); rawOffset != "" {
+		parsedOffset, err := strconv.Atoi(rawOffset)
+		if err != nil || parsedOffset < 0 {
+			respondError(w, r, http.StatusBadRequest, services.ErrInvalidPagination.Error())
+			return
+		}
+		offset = parsedOffset
+	}
+
+	sort := query.Get("sort")
+	if sort == "" {
+		sort = "created_at_desc"
+	}
+
+	filter := services.TaskListFilter{
+		UserID: query.Get("userId"),
+		Status: query.Get("status"),
+		Limit:  limit,
+		Offset: offset,
+		Sort:   sort,
+	}
+
+	tasks, err := h.inference.ListTasks(filter)
 	if err != nil {
 		status := mapErrorToStatus(err)
 		message := err.Error()

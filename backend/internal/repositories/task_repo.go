@@ -62,6 +62,11 @@ func (r *TaskRepository) getByID(exec appdb.DBTX, id string) (*models.PromptTask
 }
 
 func (r *TaskRepository) List(filter services.TaskListFilter) ([]*models.PromptTask, error) {
+	orderBy, err := taskSortClause(filter.Sort)
+	if err != nil {
+		return nil, err
+	}
+
 	query := `
 		SELECT id, user_id, model_id, payload, status, result, created_at
 		FROM prompt_tasks
@@ -86,18 +91,10 @@ func (r *TaskRepository) List(filter services.TaskListFilter) ([]*models.PromptT
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	query += " ORDER BY created_at " + normalizeTaskSort(filter.Sort)
+	query += " ORDER BY " + orderBy
 
-	if filter.Limit > 0 {
-		query += fmt.Sprintf(" LIMIT $%d", argPos)
-		args = append(args, filter.Limit)
-		argPos++
-	}
-
-	if filter.Offset > 0 {
-		query += fmt.Sprintf(" OFFSET $%d", argPos)
-		args = append(args, filter.Offset)
-	}
+	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argPos, argPos+1)
+	args = append(args, filter.Limit, filter.Offset)
 
 	rows, err := r.db.Query(query, args...)
 	if err != nil {
@@ -310,11 +307,13 @@ func scanPromptTask(scanner interface {
 	return task, nil
 }
 
-func normalizeTaskSort(sortValue string) string {
+func taskSortClause(sortValue string) (string, error) {
 	switch strings.ToLower(sortValue) {
-	case "oldest", "asc", "created_at_asc":
-		return "ASC"
+	case "", "created_at_desc":
+		return "created_at DESC", nil
+	case "created_at_asc":
+		return "created_at ASC", nil
 	default:
-		return "DESC"
+		return "", services.ErrInvalidPagination
 	}
 }

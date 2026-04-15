@@ -120,7 +120,15 @@ func (s *InferenceService) GetTaskByID(id string) (*models.PromptTask, error) {
 }
 
 func (s *InferenceService) ListTasks(filter TaskListFilter) ([]*models.PromptTask, error) {
-	if filter.Limit < 0 || filter.Offset < 0 {
+	if filter.Limit <= 0 || filter.Offset < 0 {
+		return nil, ErrInvalidPagination
+	}
+
+	switch filter.Sort {
+	case "", "created_at_desc":
+		filter.Sort = "created_at_desc"
+	case "created_at_asc":
+	default:
 		return nil, ErrInvalidPagination
 	}
 
@@ -128,11 +136,20 @@ func (s *InferenceService) ListTasks(filter TaskListFilter) ([]*models.PromptTas
 }
 
 func (s *InferenceService) GetAllTasks() ([]*models.PromptTask, error) {
-	return s.ListTasks(TaskListFilter{})
+	return s.ListTasks(TaskListFilter{
+		Limit:  20,
+		Offset: 0,
+		Sort:   "created_at_desc",
+	})
 }
 
 func (s *InferenceService) GetTasksByUserID(userID string) ([]*models.PromptTask, error) {
-	return s.ListTasks(TaskListFilter{UserID: userID})
+	return s.ListTasks(TaskListFilter{
+		UserID: userID,
+		Limit:  20,
+		Offset: 0,
+		Sort:   "created_at_desc",
+	})
 }
 
 func (s *InferenceService) UpdateTaskPayload(id string, payload string) (*models.PromptTask, error) {
