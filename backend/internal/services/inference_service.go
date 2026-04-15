@@ -78,6 +78,7 @@ func (s *InferenceService) SubmitPrompt(userID, modelID, payload string) (*model
 		UserID: userID,
 		TaskID: task.ID,
 		Amount: model.TokenCost,
+		Type:   "charge",
 	}
 	if err := s.txRepo.Create(tx); err != nil {
 		return nil, fmt.Errorf("failed to create transaction: %w", err)
@@ -138,6 +139,63 @@ func (s *InferenceService) UpdateTaskPayload(id string, payload string) (*models
 			return nil, ErrTaskNotFound
 		}
 		return nil, err
+	}
+
+	return task, nil
+}
+
+func (s *InferenceService) CancelTask(id string) (*models.PromptTask, error) {
+	task, err := s.taskRepo.GetByID(id)
+	if err != nil {
+		if isRepoNotFoundError(err, "task not found:") {
+			return nil, ErrTaskNotFound
+		}
+		return nil, err
+	}
+
+	if task.Status != models.StatusQueued {
+		return nil, ErrTaskCannotBeDeleted
+	}
+
+	model, err := s.modelRepo.GetByID(task.ModelID)
+	if err != nil {
+		if isRepoNotFoundError(err, "model not found:") {
+			return nil, ErrModelNotFound
+		}
+		return nil, err
+	}
+
+	user, err := s.userRepo.GetByID(task.UserID)
+	if err != nil {
+		if isRepoNotFoundError(err, "user not found:") {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+
+	newBalance := user.TokenBalance + model.TokenCost
+	if err := s.userRepo.UpdateBalance(user.ID, newBalance); err != nil {
+		return nil, fmt.Errorf("failed to refund balance: %w", err)
+	}
+
+	task.Status = models.StatusCancelled
+	task.Result = "Task was cancelled"
+	if err := s.taskRepo.Update(task); err != nil {
+		if isRepoNotFoundError(err, "task not found:") {
+			return nil, ErrTaskNotFound
+		}
+		return nil, err
+	}
+
+	refundTx := &models.Transaction{
+		ID:     generateID(),
+		UserID: task.UserID,
+		TaskID: task.ID,
+		Amount: model.TokenCost,
+		Type:   "refund",
+	}
+	if err := s.txRepo.Create(refundTx); err != nil {
+		return nil, fmt.Errorf("failed to create refund transaction: %w", err)
 	}
 
 	return task, nil

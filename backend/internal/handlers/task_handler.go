@@ -101,6 +101,23 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, task)
 }
 
+func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	task, err := h.inference.CancelTask(id)
+	if err != nil {
+		status := mapErrorToStatus(err)
+		message := err.Error()
+		if status == http.StatusInternalServerError {
+			message = "internal server error"
+		}
+		respondError(w, r, status, message)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, task)
+}
+
 func (h *TaskHandler) List(w http.ResponseWriter, r *http.Request) {
 	userID := r.URL.Query().Get("userId")
 	if userID == "" {

@@ -2,61 +2,63 @@ package models
 
 import "time"
 
-// User представляє користувача платформи з балансом токенів
+// User представляє користувача платформи з балансом токенів.
 type User struct {
 	ID           string  `json:"id"`
 	Username     string  `json:"username"`
 	TokenBalance float64 `json:"tokenBalance"`
 }
 
-// AIModel представляє ШІ-модель, доступну для обробки запитів
+// AIModel представляє ШІ-модель, доступну для обробки запитів.
 type AIModel struct {
 	ID          string  `json:"id"`
 	Name        string  `json:"name"`
 	Description string  `json:"description"`
-	TokenCost   float64 `json:"tokenCost"` // Вартість одного виклику в токенах
+	TokenCost   float64 `json:"tokenCost"`
 }
 
-// TaskStatus описує поточний стан виконання завдання
+// TaskStatus описує поточний стан виконання завдання.
 type TaskStatus string
 
 const (
-	StatusQueued     TaskStatus = "Queued"     // У черзі
-	StatusProcessing TaskStatus = "Processing" // Обробляється воркером
-	StatusCompleted  TaskStatus = "Completed"  // Успішно завершено
-	StatusFailed     TaskStatus = "Failed"     // Помилка генерації
+	StatusQueued     TaskStatus = "Queued"
+	StatusProcessing TaskStatus = "Processing"
+	StatusCompleted  TaskStatus = "Completed"
+	StatusFailed     TaskStatus = "Failed"
+	StatusCancelled  TaskStatus = "Cancelled"
 )
 
-// PromptTask представляє запит користувача до ШІ-моделі (доменна сутність)
+// PromptTask представляє запит користувача до ШІ-моделі.
 type PromptTask struct {
 	ID        string     `json:"id"`
 	UserID    string     `json:"userId"`
 	ModelID   string     `json:"modelId"`
-	Payload   string     `json:"payload"`           // Сам текст запиту (промпт)
+	Payload   string     `json:"payload"`
 	Status    TaskStatus `json:"status"`
-	Result    string     `json:"result,omitempty"`  // Відповідь моделі (не показується, якщо пуста)
+	Result    string     `json:"result,omitempty"`
 	CreatedAt time.Time  `json:"createdAt"`
 }
 
-// WorkerStatus описує стан обчислювального вузла (воркера)
+// WorkerStatus описує стан обчислювального вузла.
 type WorkerStatus string
 
 const (
-	WorkerIdle WorkerStatus = "Idle" // Вільний
-	WorkerBusy WorkerStatus = "Busy" // Зайнятий обробкою
+	WorkerIdle WorkerStatus = "Idle"
+	WorkerBusy WorkerStatus = "Busy"
 )
 
-// WorkerNode представляє фоновий процес, який бере завдання з черги та виконує їх
+// WorkerNode представляє фоновий процес, який бере завдання з черги.
 type WorkerNode struct {
 	ID              string       `json:"id"`
-	SupportedModels []string     `json:"supportedModels"` // Які моделі цей воркер може обробити
+	SupportedModels []string     `json:"supportedModels"`
 	Status          WorkerStatus `json:"status"`
 }
 
-// Transaction фіксує факт списання токенів у користувача за конкретне завдання
+// Transaction фіксує фінансову операцію по задачі.
 type Transaction struct {
 	ID     string  `json:"id"`
 	UserID string  `json:"userId"`
 	TaskID string  `json:"taskId"`
-	Amount float64 `json:"amount"` // Скільки токенів було списано
+	Amount float64 `json:"amount"`
+	Type   string  `json:"type,omitempty"`
 }

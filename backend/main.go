@@ -15,36 +15,30 @@ import (
 )
 
 func main() {
-	// Database
 	postgresDB, err := dbpkg.InitDB()
 	if err != nil {
 		log.Fatalf("failed to initialize PostgreSQL connection: %v", err)
 	}
 	defer postgresDB.Close()
 
-	// Repositories
 	userRepo := repositories.NewUserRepository(postgresDB)
 	modelRepo := repositories.NewModelRepository(postgresDB)
 	taskRepo := repositories.NewTaskRepository(postgresDB)
 	txRepo := repositories.NewTransactionRepository(postgresDB)
 	workerRepo := repositories.NewWorkerRepository(postgresDB)
 
-	// External clients
 	ollama := services.NewOllamaClient("http://localhost:11434")
 
-	// Services
 	userSvc := services.NewUserService(userRepo)
 	modelSvc := services.NewModelService(modelRepo)
 	inferenceSvc := services.NewInferenceService(userRepo, modelRepo, taskRepo, txRepo)
 	workerSvc := services.NewWorkerService(workerRepo, taskRepo, modelRepo, ollama)
 	workerSvc.Start()
 
-	// Handlers
 	userH := handlers.NewUserHandler(userSvc)
 	modelH := handlers.NewModelHandler(modelSvc)
 	taskH := handlers.NewTaskHandler(inferenceSvc)
 
-	// Router
 	r := chi.NewRouter()
 	r.Use(chimw.Logger)
 	r.Use(handlers.RecoveryMiddleware)
@@ -70,6 +64,7 @@ func main() {
 		r.Post("/tasks", taskH.Submit)
 		r.Get("/tasks/{id}", taskH.GetByID)
 		r.Put("/tasks/{id}", taskH.UpdateTask)
+		r.Delete("/tasks/{id}", taskH.DeleteTask)
 		r.Get("/tasks", taskH.List)
 	})
 
