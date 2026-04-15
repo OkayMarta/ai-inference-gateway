@@ -1,39 +1,30 @@
 package repositories
 
 import (
-	"sync"
+	"database/sql"
+	"fmt"
 
 	"ai-inference-gateway/internal/models"
 )
 
-// TransactionRepository зберігає історію транзакцій (списання токенів за задачі). Це основа для "білінгу"
 type TransactionRepository struct {
-	mu           sync.RWMutex
-	transactions map[string]*models.Transaction
+	db *sql.DB
 }
 
-func NewTransactionRepository() *TransactionRepository {
-	return &TransactionRepository{transactions: make(map[string]*models.Transaction)}
+func NewTransactionRepository(db *sql.DB) *TransactionRepository {
+	return &TransactionRepository{db: db}
 }
 
-// Create просто зберігає запис про нову транзакцію
-func (r *TransactionRepository) Create(tx *models.Transaction) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.transactions[tx.ID] = tx
-}
-
-// GetByUserID дозволяє подивитись історію витрат конкретного користувача
-func (r *TransactionRepository) GetByUserID(userID string) []*models.Transaction {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	
-	var out []*models.Transaction
-	for _, tx := range r.transactions {
-		if tx.UserID == userID {
-			cp := *tx
-			out = append(out, &cp)
-		}
+func (r *TransactionRepository) Create(tx *models.Transaction) error {
+	// Поточна доменна модель ще не містить поля типу транзакції.
+	// На цьому етапі репозиторій зберігає єдиний наявний сценарій: списання за задачу.
+	_, err := r.db.Exec(`
+		INSERT INTO transactions (id, user_id, task_id, amount, type)
+		VALUES ($1, $2, NULLIF($3, ''), $4, $5)
+	`, tx.ID, tx.UserID, tx.TaskID, tx.Amount, "charge")
+	if err != nil {
+		return fmt.Errorf("create transaction %s: %w", tx.ID, err)
 	}
-	return out
+
+	return nil
 }

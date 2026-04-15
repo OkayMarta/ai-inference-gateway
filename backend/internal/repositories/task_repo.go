@@ -1,140 +1,295 @@
 package repositories
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
-	"sort"
-	"sync"
+	"strings"
 	"time"
 
 	"ai-inference-gateway/internal/models"
+	"ai-inference-gateway/internal/services"
+
+	"github.com/lib/pq"
 )
 
-// TaskRepository stores prompt tasks submitted for processing.
 type TaskRepository struct {
-	mu    sync.RWMutex
-	tasks map[string]*models.PromptTask
+	db *sql.DB
 }
 
-func NewTaskRepository() *TaskRepository {
-	return &TaskRepository{tasks: make(map[string]*models.PromptTask)}
+func NewTaskRepository(db *sql.DB) *TaskRepository {
+	return &TaskRepository{db: db}
 }
 
 func (r *TaskRepository) GetByID(id string) (*models.PromptTask, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	task := &models.PromptTask{}
+	var result sql.NullString
 
-	t, ok := r.tasks[id]
-	if !ok {
-		return nil, fmt.Errorf("task not found: %s", id)
-	}
-	cp := *t
-	return &cp, nil
-}
-
-func (r *TaskRepository) GetAll() []*models.PromptTask {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	out := make([]*models.PromptTask, 0, len(r.tasks))
-	for _, t := range r.tasks {
-		cp := *t
-		out = append(out, &cp)
-	}
-
-	sort.Slice(out, func(i, j int) bool {
-		return out[i].CreatedAt.After(out[j].CreatedAt)
-	})
-
-	return out
-}
-
-// GetByUserID returns all tasks for a specific user.
-func (r *TaskRepository) GetByUserID(userID string) []*models.PromptTask {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	var out []*models.PromptTask
-	for _, t := range r.tasks {
-		if t.UserID == userID {
-			cp := *t
-			out = append(out, &cp)
+	err := r.db.QueryRow(`
+		SELECT id, user_id, model_id, payload, status, result, created_at
+		FROM prompt_tasks
+		WHERE id = $1
+	`, id).Scan(
+		&task.ID,
+		&task.UserID,
+		&task.ModelID,
+		&task.Payload,
+		&task.Status,
+		&result,
+		&task.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("task not found: %s", id)
 		}
+		return nil, fmt.Errorf("get task by id %s: %w", id, err)
 	}
 
-	// Sort from newest to oldest by creation time.
-	sort.Slice(out, func(i, j int) bool {
-		return out[i].CreatedAt.After(out[j].CreatedAt)
-	})
-	return out
-}
-
-// Create adds a new task and stamps its creation time.
-func (r *TaskRepository) Create(task *models.PromptTask) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	task.CreatedAt = time.Now()
-	r.tasks[task.ID] = task
-}
-
-// Complete is called by a worker when processing finishes successfully.
-// It updates the task status to Completed and stores the result.
-func (r *TaskRepository) Complete(id, result string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	t, ok := r.tasks[id]
-	if !ok {
-		return fmt.Errorf("task not found: %s", id)
+	if result.Valid {
+		task.Result = result.String
 	}
-	t.Status = models.StatusCompleted
-	t.Result = result
+
+	return task, nil
+}
+
+func (r *TaskRepository) List(filter services.TaskListFilter) ([]*models.PromptTask, error) {
+	query := `
+		SELECT id, user_id, model_id, payload, status, result, created_at
+		FROM prompt_tasks
+	`
+	var conditions []string
+	var args []any
+	argPos := 1
+
+	if filter.UserID != "" {
+		conditions = append(conditions, fmt.Sprintf("user_id = $%d", argPos))
+		args = append(args, filter.UserID)
+		argPos++
+	}
+
+	if filter.Status != "" {
+		conditions = append(conditions, fmt.Sprintf("status = $%d", argPos))
+		args = append(args, filter.Status)
+		argPos++
+	}
+
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	query += " ORDER BY created_at " + normalizeTaskSort(filter.Sort)
+
+	if filter.Limit > 0 {
+		query += fmt.Sprintf(" LIMIT $%d", argPos)
+		args = append(args, filter.Limit)
+		argPos++
+	}
+
+	if filter.Offset > 0 {
+		query += fmt.Sprintf(" OFFSET $%d", argPos)
+		args = append(args, filter.Offset)
+	}
+
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list tasks: %w", err)
+	}
+	defer rows.Close()
+
+	var tasks []*models.PromptTask
+	for rows.Next() {
+		task, err := scanPromptTask(rows)
+		if err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, task)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate tasks: %w", err)
+	}
+
+	return tasks, nil
+}
+
+func (r *TaskRepository) Create(task *models.PromptTask) error {
+	if task.CreatedAt.IsZero() {
+		if err := r.db.QueryRow(`
+			INSERT INTO prompt_tasks (id, user_id, model_id, payload, status, result)
+			VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''))
+			RETURNING created_at
+		`, task.ID, task.UserID, task.ModelID, task.Payload, task.Status, task.Result).Scan(&task.CreatedAt); err != nil {
+			return fmt.Errorf("create task %s: %w", task.ID, err)
+		}
+		return nil
+	}
+
+	_, err := r.db.Exec(`
+		INSERT INTO prompt_tasks (id, user_id, model_id, payload, status, result, created_at)
+		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), $7)
+	`, task.ID, task.UserID, task.ModelID, task.Payload, task.Status, task.Result, task.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("create task %s: %w", task.ID, err)
+	}
+
 	return nil
 }
 
-func (r *TaskRepository) Fail(id, result string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	t, ok := r.tasks[id]
-	if !ok {
-		return fmt.Errorf("task not found: %s", id)
+func (r *TaskRepository) Update(task *models.PromptTask) error {
+	result, err := r.db.Exec(`
+		UPDATE prompt_tasks
+		SET user_id = $2,
+		    model_id = $3,
+		    payload = $4,
+		    status = $5,
+		    result = NULLIF($6, '')
+		WHERE id = $1
+	`, task.ID, task.UserID, task.ModelID, task.Payload, task.Status, task.Result)
+	if err != nil {
+		return fmt.Errorf("update task %s: %w", task.ID, err)
 	}
-	t.Status = models.StatusFailed
-	t.Result = result
+
+	if err := ensureRowsAffected(result, fmt.Sprintf("task not found: %s", task.ID)); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-// GetNextQueued atomically finds the oldest queued task supported by the worker.
-func (r *TaskRepository) GetNextQueued(supportedModels []string) *models.PromptTask {
-	r.mu.Lock() // Use Lock because the status is updated before returning.
-	defer r.mu.Unlock()
-
-	// Convert supported model IDs to a set for fast lookups.
-	supported := make(map[string]bool, len(supportedModels))
-	for _, m := range supportedModels {
-		supported[m] = true
+func (r *TaskRepository) Delete(id string) error {
+	result, err := r.db.Exec(`
+		DELETE FROM prompt_tasks
+		WHERE id = $1
+	`, id)
+	if err != nil {
+		return fmt.Errorf("delete task %s: %w", id, err)
 	}
 
-	var oldest *models.PromptTask
-
-	// Scan all tasks.
-	for _, t := range r.tasks {
-		// Skip tasks that are not queued or not supported by this worker.
-		if t.Status != models.StatusQueued || !supported[t.ModelID] {
-			continue
-		}
-		// Track the oldest matching task.
-		if oldest == nil || t.CreatedAt.Before(oldest.CreatedAt) {
-			oldest = t
-		}
+	if err := ensureRowsAffected(result, fmt.Sprintf("task not found: %s", id)); err != nil {
+		return err
 	}
 
-	// Move the selected task to Processing before returning it.
-	if oldest != nil {
-		oldest.Status = models.StatusProcessing
-		cp := *oldest
-		return &cp // Return a copy for worker processing.
-	}
 	return nil
+}
+
+func (r *TaskRepository) Complete(id, resultText string) error {
+	return r.updateTaskResult(id, models.StatusCompleted, resultText)
+}
+
+func (r *TaskRepository) Fail(id, resultText string) error {
+	return r.updateTaskResult(id, models.StatusFailed, resultText)
+}
+
+func (r *TaskRepository) GetNextQueued(supportedModels []string) (*models.PromptTask, error) {
+	if len(supportedModels) == 0 {
+		return nil, nil
+	}
+
+	tx, err := r.db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("begin task selection transaction: %w", err)
+	}
+
+	task := &models.PromptTask{}
+	var result sql.NullString
+
+	err = tx.QueryRow(`
+		SELECT id, user_id, model_id, payload, status, result, created_at
+		FROM prompt_tasks
+		WHERE status = $1
+		  AND model_id = ANY($2)
+		ORDER BY created_at ASC
+		FOR UPDATE SKIP LOCKED
+		LIMIT 1
+	`, models.StatusQueued, pq.Array(supportedModels)).Scan(
+		&task.ID,
+		&task.UserID,
+		&task.ModelID,
+		&task.Payload,
+		&task.Status,
+		&result,
+		&task.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			_ = tx.Rollback()
+			return nil, nil
+		}
+		_ = tx.Rollback()
+		return nil, fmt.Errorf("select next queued task: %w", err)
+	}
+
+	if result.Valid {
+		task.Result = result.String
+	}
+
+	if _, err := tx.Exec(`
+		UPDATE prompt_tasks
+		SET status = $2
+		WHERE id = $1
+	`, task.ID, models.StatusProcessing); err != nil {
+		_ = tx.Rollback()
+		return nil, fmt.Errorf("mark task %s as processing: %w", task.ID, err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit task selection transaction: %w", err)
+	}
+
+	task.Status = models.StatusProcessing
+	return task, nil
+}
+
+func (r *TaskRepository) updateTaskResult(id string, status models.TaskStatus, resultText string) error {
+	result, err := r.db.Exec(`
+		UPDATE prompt_tasks
+		SET status = $2,
+		    result = NULLIF($3, '')
+		WHERE id = $1
+	`, id, status, resultText)
+	if err != nil {
+		return fmt.Errorf("update task %s state: %w", id, err)
+	}
+
+	if err := ensureRowsAffected(result, fmt.Sprintf("task not found: %s", id)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func scanPromptTask(scanner interface {
+	Scan(dest ...any) error
+}) (*models.PromptTask, error) {
+	task := &models.PromptTask{}
+	var result sql.NullString
+	var createdAt time.Time
+
+	if err := scanner.Scan(
+		&task.ID,
+		&task.UserID,
+		&task.ModelID,
+		&task.Payload,
+		&task.Status,
+		&result,
+		&createdAt,
+	); err != nil {
+		return nil, fmt.Errorf("scan task: %w", err)
+	}
+
+	task.CreatedAt = createdAt
+	if result.Valid {
+		task.Result = result.String
+	}
+
+	return task, nil
+}
+
+func normalizeTaskSort(sortValue string) string {
+	switch strings.ToLower(sortValue) {
+	case "oldest", "asc", "created_at_asc":
+		return "ASC"
+	default:
+		return "DESC"
+	}
 }

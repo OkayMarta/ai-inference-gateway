@@ -1,57 +1,109 @@
 package repositories
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
-	"sync"
 
 	"ai-inference-gateway/internal/models"
 )
 
-// ModelRepository зберігає ІШ-моделі в оперативній пам'яті (in-memory)
-// Використовує м'ютекс для безпечного доступу з різних потоків (горутин)
 type ModelRepository struct {
-	mu     sync.RWMutex // RWMutex дозволяє багатьом читати одночасно, але записувати - тільки по одному
-	models map[string]*models.AIModel
+	db *sql.DB
 }
 
-// NewModelRepository - конструктор, який ініціалізує пусту мапу для моделей
-func NewModelRepository() *ModelRepository {
-	return &ModelRepository{models: make(map[string]*models.AIModel)}
+func NewModelRepository(db *sql.DB) *ModelRepository {
+	return &ModelRepository{db: db}
 }
 
-// GetByID шукає модель за її унікальним ідентифікатором
+func (r *ModelRepository) GetAll() ([]*models.AIModel, error) {
+	rows, err := r.db.Query(`
+		SELECT id, name, description, token_cost
+		FROM ai_models
+		ORDER BY name, id
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list models: %w", err)
+	}
+	defer rows.Close()
+
+	var items []*models.AIModel
+	for rows.Next() {
+		model := &models.AIModel{}
+		if err := rows.Scan(&model.ID, &model.Name, &model.Description, &model.TokenCost); err != nil {
+			return nil, fmt.Errorf("scan model: %w", err)
+		}
+		items = append(items, model)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate models: %w", err)
+	}
+
+	return items, nil
+}
+
 func (r *ModelRepository) GetByID(id string) (*models.AIModel, error) {
-	r.mu.RLock() // Блокуємо тільки для читання (Read Lock)
-	defer r.mu.RUnlock() // Гарантовано розблокуємо при виході з функції
+	model := &models.AIModel{}
 
-	m, ok := r.models[id]
-	if !ok {
-		return nil, fmt.Errorf("model not found: %s", id)
+	err := r.db.QueryRow(`
+		SELECT id, name, description, token_cost
+		FROM ai_models
+		WHERE id = $1
+	`, id).Scan(&model.ID, &model.Name, &model.Description, &model.TokenCost)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("model not found: %s", id)
+		}
+		return nil, fmt.Errorf("get model by id %s: %w", id, err)
 	}
-	
-	// Важливий момент: ми робимо копію об'єкта (*m) і повертаємо вказівник на копію (&cp)
-	// Це робиться для того, щоб хтось ззовні випадково не змінив дані прямо в нашій мапі
-	cp := *m
-	return &cp, nil
+
+	return model, nil
 }
 
-// GetAll повертає список усіх доступних моделей
-func (r *ModelRepository) GetAll() []*models.AIModel {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	
-	out := make([]*models.AIModel, 0, len(r.models))
-	for _, m := range r.models {
-		cp := *m
-		out = append(out, &cp)
+func (r *ModelRepository) Create(model *models.AIModel) error {
+	_, err := r.db.Exec(`
+		INSERT INTO ai_models (id, name, description, token_cost)
+		VALUES ($1, $2, $3, $4)
+	`, model.ID, model.Name, model.Description, model.TokenCost)
+	if err != nil {
+		return fmt.Errorf("create model %s: %w", model.ID, err)
 	}
-	return out
+
+	return nil
 }
 
-// Create додає нову модель у сховище.
-func (r *ModelRepository) Create(m *models.AIModel) {
-	r.mu.Lock() // Повне блокування (Write Lock), бо ми змінюємо дані
-	defer r.mu.Unlock()
-	
-	r.models[m.ID] = m
+func (r *ModelRepository) Update(model *models.AIModel) error {
+	result, err := r.db.Exec(`
+		UPDATE ai_models
+		SET name = $2,
+		    description = $3,
+		    token_cost = $4
+		WHERE id = $1
+	`, model.ID, model.Name, model.Description, model.TokenCost)
+	if err != nil {
+		return fmt.Errorf("update model %s: %w", model.ID, err)
+	}
+
+	if err := ensureRowsAffected(result, fmt.Sprintf("model not found: %s", model.ID)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *ModelRepository) Delete(id string) error {
+	result, err := r.db.Exec(`
+		DELETE FROM ai_models
+		WHERE id = $1
+	`, id)
+	if err != nil {
+		return fmt.Errorf("delete model %s: %w", id, err)
+	}
+
+	if err := ensureRowsAffected(result, fmt.Sprintf("model not found: %s", id)); err != nil {
+		return err
+	}
+
+	return nil
 }
