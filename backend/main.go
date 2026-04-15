@@ -26,15 +26,17 @@ func main() {
 	}
 	defer postgresDB.Close()
 
+	log.Println("initializing PostgreSQL-backed repositories...")
 	userRepo := repositories.NewUserRepository(postgresDB)
 	modelRepo := repositories.NewModelRepository(postgresDB)
 	taskRepo := repositories.NewTaskRepository(postgresDB)
 	txRepo := repositories.NewTransactionRepository(postgresDB)
 	workerRepo := repositories.NewWorkerRepository(postgresDB)
 
+	log.Println("initializing Ollama client...")
 	ollama := services.NewOllamaClient("http://localhost:11434")
 
-	userSvc := services.NewUserService(userRepo)
+	// Сервіси для startup sync створюємо раніше, бо вони потрібні ще до запуску HTTP-шару.
 	modelSvc := services.NewModelService(modelRepo, ollama)
 	workerSvc := services.NewWorkerService(workerRepo, taskRepo, modelRepo, ollama)
 
@@ -57,13 +59,19 @@ func main() {
 		}
 	}
 
+	log.Println("initializing application services...")
+	userSvc := services.NewUserService(userRepo)
 	inferenceSvc := services.NewInferenceService(postgresDB, userRepo, modelRepo, taskRepo, txRepo)
+
+	log.Println("starting background worker service...")
 	workerSvc.Start()
 
+	log.Println("initializing HTTP handlers...")
 	userH := handlers.NewUserHandler(userSvc)
 	modelH := handlers.NewModelHandler(modelSvc)
 	taskH := handlers.NewTaskHandler(inferenceSvc)
 
+	log.Println("configuring HTTP router...")
 	r := chi.NewRouter()
 	r.Use(chimw.Logger)
 	r.Use(handlers.RecoveryMiddleware)
@@ -93,6 +101,7 @@ func main() {
 		r.Get("/tasks", taskH.List)
 	})
 
+	log.Println("AI Inference Gateway startup complete")
 	log.Println("AI Inference Gateway запущено на http://localhost:8080")
 	if err := http.ListenAndServe(":8080", r); err != nil {
 		log.Fatalf("помилка запуску сервера: %v", err)
