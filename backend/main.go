@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/joho/godotenv"
 
 	dbpkg "ai-inference-gateway/internal/db"
 	"ai-inference-gateway/internal/handlers"
@@ -15,6 +16,10 @@ import (
 )
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found")
+	}
+
 	postgresDB, err := dbpkg.InitDB()
 	if err != nil {
 		log.Fatalf("failed to initialize PostgreSQL connection: %v", err)

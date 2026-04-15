@@ -22,10 +22,12 @@ const Dashboard = () => {
     const [selectedUserId, setSelectedUserId] = useState("");
     const [selectedModelId, setSelectedModelId] = useState("");
     const [prompt, setPrompt] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
 
     const [bootLoading, setBootLoading] = useState(true);
     const [taskLoading, setTaskLoading] = useState(false);
     const [submitLoading, setSubmitLoading] = useState(false);
+    const [cancelLoadingTaskId, setCancelLoadingTaskId] = useState("");
     const [screenError, setScreenError] = useState("");
     const [submitError, setSubmitError] = useState("");
     const [submitSuccess, setSubmitSuccess] = useState("");
@@ -120,7 +122,13 @@ const Dashboard = () => {
 
             try {
                 const [nextTasks, nextUsers] = await Promise.all([
-                    api.getTasks(selectedUserId),
+                    api.getTasks({
+                        userId: selectedUserId,
+                        status: statusFilter,
+                        limit: 20,
+                        offset: 0,
+                        sort: "created_at_desc",
+                    }),
                     api.getUsers(),
                 ]);
 
@@ -148,7 +156,7 @@ const Dashboard = () => {
             active = false;
             clearInterval(intervalId);
         };
-    }, [selectedUserId]);
+    }, [selectedUserId, statusFilter]);
 
     useEffect(() => {
         if (!submitSuccess) {
@@ -181,6 +189,11 @@ const Dashboard = () => {
         setPrompt(event.target.value);
     };
 
+    const handleStatusFilterChange = (event) => {
+        setStatusFilter(event.target.value);
+        setScreenError("");
+    };
+
     const handleSubmit = async (event) => {
         event.preventDefault();
         if (!selectedUserId || !selectedModelId || !prompt.trim()) {
@@ -195,7 +208,13 @@ const Dashboard = () => {
             await api.submitTask(selectedUserId, selectedModelId, prompt.trim());
 
             const [nextTasks, nextUsers] = await Promise.all([
-                api.getTasks(selectedUserId),
+                api.getTasks({
+                    userId: selectedUserId,
+                    status: statusFilter,
+                    limit: 20,
+                    offset: 0,
+                    sort: "created_at_desc",
+                }),
                 api.getUsers(),
             ]);
 
@@ -207,6 +226,32 @@ const Dashboard = () => {
             setSubmitError(error.message);
         } finally {
             setSubmitLoading(false);
+        }
+    };
+
+    const handleCancelTask = async (taskId) => {
+        try {
+            setCancelLoadingTaskId(taskId);
+            await api.deleteTask(taskId);
+
+            const [nextTasks, nextUsers] = await Promise.all([
+                api.getTasks({
+                    userId: selectedUserId,
+                    status: statusFilter,
+                    limit: 20,
+                    offset: 0,
+                    sort: "created_at_desc",
+                }),
+                api.getUsers(),
+            ]);
+
+            setTasks(normalizeList(nextTasks));
+            setUsers(normalizeList(nextUsers));
+        } catch (error) {
+            console.error(error);
+            window.alert(`Error: ${error.message}`);
+        } finally {
+            setCancelLoadingTaskId("");
         }
     };
 
@@ -258,6 +303,10 @@ const Dashboard = () => {
                 queuedCount={queuedCount}
                 processingCount={processingCount}
                 completedCount={completedCount}
+                statusFilter={statusFilter}
+                onStatusFilterChange={handleStatusFilterChange}
+                onCancelTask={handleCancelTask}
+                cancelLoadingTaskId={cancelLoadingTaskId}
             />
         </div>
     );

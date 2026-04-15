@@ -38,6 +38,10 @@ const TaskList = ({
     queuedCount,
     processingCount,
     completedCount,
+    statusFilter,
+    onStatusFilterChange,
+    onCancelTask,
+    cancelLoadingTaskId,
 }) => {
     const hasSelectedUser = Boolean(selectedUserId);
 
@@ -79,16 +83,34 @@ const TaskList = ({
         );
     } else {
         content = (
-            <div className="task-list-stack">
-                {screenError && (
-                    <div className="notice notice-error notice-quiet">
-                        {screenError}
+                <div className="task-list-stack">
+                    {screenError && (
+                        <div className="notice notice-error notice-quiet">
+                            {screenError}
+                        </div>
+                    )}
+                    <div className="task-list-controls">
+                        <label className="field-label task-filter-label" htmlFor="task-status-filter">
+                            Status
+                        </label>
+                        <select
+                            id="task-status-filter"
+                            value={statusFilter}
+                            onChange={onStatusFilterChange}
+                            className="field-input task-filter-select"
+                        >
+                            <option value="">All</option>
+                            <option value="Queued">Queued</option>
+                            <option value="Processing">Processing</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Failed">Failed</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
                     </div>
-                )}
-                <div className="task-list">
-                    {sortedTasks.map((task) => {
-                        const taskModel =
-                            models.find((model) => model.id === task.modelId) || null;
+                    <div className="task-list">
+                        {sortedTasks.map((task) => {
+                            const taskModel =
+                                models.find((model) => model.id === task.modelId) || null;
 
                         return (
                             <article key={task.id} className="task-card">
@@ -103,6 +125,21 @@ const TaskList = ({
                                         {formatTimestamp(task.createdAt)}
                                     </span>
                                 </div>
+
+                                {task.status === "Queued" && (
+                                    <div className="task-card-actions">
+                                        <button
+                                            type="button"
+                                            className="task-action-button"
+                                            onClick={() => onCancelTask(task.id)}
+                                            disabled={cancelLoadingTaskId === task.id}
+                                        >
+                                            {cancelLoadingTaskId === task.id
+                                                ? "Cancelling..."
+                                                : "Cancel"}
+                                        </button>
+                                    </div>
+                                )}
 
                                 <dl className="task-details-grid">
                                     <div className="task-detail">

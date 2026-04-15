@@ -54,7 +54,28 @@ const request = async (url, options = {}) => {
 export const api = {
     getUsers: () => request("/users"),
     getModels: () => request("/models"),
-    getTasks: (userId) => request(`/tasks?userId=${encodeURIComponent(userId)}`),
+    getTasks: (params = {}) => {
+        const query = new URLSearchParams();
+
+        if (params.userId) {
+            query.set("userId", params.userId);
+        }
+        if (params.status) {
+            query.set("status", params.status);
+        }
+        if (params.limit) {
+            query.set("limit", String(params.limit));
+        }
+        if (typeof params.offset === "number") {
+            query.set("offset", String(params.offset));
+        }
+        if (params.sort) {
+            query.set("sort", params.sort);
+        }
+
+        const suffix = query.toString() ? `?${query.toString()}` : "";
+        return request(`/tasks${suffix}`);
+    },
     submitTask: (userIdOrParams, modelId, payload) => {
         const task = normalizeSubmitTaskPayload(
             userIdOrParams,
@@ -67,4 +88,8 @@ export const api = {
             body: JSON.stringify(task),
         });
     },
+    deleteTask: (taskId) =>
+        request(`/tasks/${encodeURIComponent(taskId)}`, {
+            method: "DELETE",
+        }),
 };
