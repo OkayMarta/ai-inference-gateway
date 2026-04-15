@@ -8,4 +8,7 @@
 .env
 .env.*
 /backend/.env
+/backend/.test-backend.out.log
+/backend/.test-backend.err.log
+/backend/.test-backend.pid
 .DS_Store

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	appdb "ai-inference-gateway/internal/db"
 	"ai-inference-gateway/internal/models"
@@ -88,23 +89,70 @@ func (r *ModelRepository) ReplaceAll(models []*models.AIModel) error {
 		return fmt.Errorf("begin replace models transaction: %w", err)
 	}
 
-	if _, err := tx.Exec(`DELETE FROM ai_models`); err != nil {
-		_ = tx.Rollback()
-		return fmt.Errorf("clear models: %w", err)
-	}
-
 	for _, model := range models {
 		if _, err := tx.Exec(`
 			INSERT INTO ai_models (id, name, description, token_cost)
 			VALUES ($1, $2, $3, $4)
+			ON CONFLICT (id) DO UPDATE
+			SET name = EXCLUDED.name,
+			    description = EXCLUDED.description,
+			    token_cost = EXCLUDED.token_cost
 		`, model.ID, model.Name, model.Description, model.TokenCost); err != nil {
 			_ = tx.Rollback()
-			return fmt.Errorf("insert synced model %s: %w", model.ID, err)
+			return fmt.Errorf("upsert synced model %s: %w", model.ID, err)
 		}
+	}
+
+	if err := pruneObsoleteModels(tx, models); err != nil {
+		_ = tx.Rollback()
+		return err
 	}
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit replace models transaction: %w", err)
+	}
+
+	return nil
+}
+
+func pruneObsoleteModels(tx *sql.Tx, models []*models.AIModel) error {
+	// З БД видаляємо лише моделі, яких більше немає в актуальному Ollama sync
+	// і які вже не використовуються історичними prompt_tasks. Це не ламає FK
+	// і зберігає цілісність уже створених задач.
+	if len(models) == 0 {
+		if _, err := tx.Exec(`
+			DELETE FROM ai_models AS m
+			WHERE NOT EXISTS (
+				SELECT 1
+				FROM prompt_tasks AS t
+				WHERE t.model_id = m.id
+			)
+		`); err != nil {
+			return fmt.Errorf("prune obsolete models after empty sync: %w", err)
+		}
+
+		return nil
+	}
+
+	placeholders := make([]string, 0, len(models))
+	args := make([]any, 0, len(models))
+	for idx, model := range models {
+		placeholders = append(placeholders, fmt.Sprintf("$%d", idx+1))
+		args = append(args, model.ID)
+	}
+
+	query := fmt.Sprintf(`
+		DELETE FROM ai_models AS m
+		WHERE m.id NOT IN (%s)
+		  AND NOT EXISTS (
+			SELECT 1
+			FROM prompt_tasks AS t
+			WHERE t.model_id = m.id
+		  )
+	`, strings.Join(placeholders, ", "))
+
+	if _, err := tx.Exec(query, args...); err != nil {
+		return fmt.Errorf("prune obsolete models: %w", err)
 	}
 
 	return nil

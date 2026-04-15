@@ -26,6 +26,7 @@ type UserRepository interface {
 	Delete(id string) error
 	UpdateBalance(id string, balance float64) error
 	UpdateBalanceTx(tx appdb.DBTX, id string, balance float64) error
+	DeductBalanceTx(tx appdb.DBTX, id string, amount float64) error
 }
 
 // ModelRepository описує доступ до AI-моделей як до повноцінних persistent entities.

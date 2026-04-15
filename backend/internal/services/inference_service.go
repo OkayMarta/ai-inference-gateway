@@ -71,9 +71,12 @@ func (s *InferenceService) SubmitPrompt(userID, modelID, payload string) (*model
 		return nil, ErrInsufficientBalance
 	}
 
-	if err := s.userRepo.UpdateBalanceTx(tx, userID, user.TokenBalance-model.TokenCost); err != nil {
+	if err := s.userRepo.DeductBalanceTx(tx, userID, model.TokenCost); err != nil {
 		_ = tx.Rollback()
-		return nil, fmt.Errorf("failed to update balance: %w", err)
+		if err.Error() == ErrInsufficientBalance.Error() {
+			return nil, ErrInsufficientBalance
+		}
+		return nil, fmt.Errorf("failed to deduct balance: %w", err)
 	}
 
 	task := &models.PromptTask{

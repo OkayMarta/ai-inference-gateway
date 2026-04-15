@@ -124,6 +124,29 @@ func (r *UserRepository) UpdateBalanceTx(tx appdb.DBTX, id string, balance float
 	return r.updateBalance(tx, id, balance)
 }
 
+func (r *UserRepository) DeductBalanceTx(tx appdb.DBTX, id string, amount float64) error {
+	result, err := tx.Exec(`
+		UPDATE users
+		SET token_balance = token_balance - $2
+		WHERE id = $1
+		  AND token_balance >= $2
+	`, id, amount)
+	if err != nil {
+		return fmt.Errorf("deduct balance for user %s: %w", id, err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("read affected rows for user %s balance deduction: %w", id, err)
+	}
+
+	if rowsAffected == 0 {
+		return errors.New("insufficient token balance")
+	}
+
+	return nil
+}
+
 func (r *UserRepository) updateBalance(exec appdb.DBTX, id string, balance float64) error {
 	result, err := exec.Exec(`
 		UPDATE users
