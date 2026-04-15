@@ -15,6 +15,8 @@ const TaskComposer = ({
     balanceAlert,
     metricFlashToken,
     submitLoading,
+    onDismissSubmitError,
+    onDismissSubmitSuccess,
     onDismissBalanceAlert,
     onUserChange,
     onModelChange,
@@ -22,28 +24,58 @@ const TaskComposer = ({
     onSubmit,
 }) => {
     const noModelsNotice =
-        "Немає доступних моделей. Переконайтеся, що Ollama запущена і має завантажені моделі.";
+        "No models are available. Make sure Ollama is running and has models loaded.";
 
     return (
         <SectionCard as="aside" className="control-panel">
             <form className="control-form" onSubmit={onSubmit}>
-                {balanceAlert && (
-                    <div
-                        className="floating-notice floating-notice-error"
-                        role="alert"
-                        aria-live="assertive"
-                    >
-                        <span>{balanceAlert}</span>
-                        <button
-                            type="button"
-                            className="floating-notice-close"
-                            onClick={onDismissBalanceAlert}
-                            aria-label="Dismiss balance alert"
-                        >
-                            ×
-                        </button>
+                {(balanceAlert || submitError || submitSuccess) && (
+                    <div className="floating-notice-stack" aria-live="polite">
+                        {balanceAlert && (
+                            <div className="floating-notice floating-notice-error" role="alert">
+                                <span>{balanceAlert}</span>
+                                <button
+                                    type="button"
+                                    className="floating-notice-close"
+                                    onClick={onDismissBalanceAlert}
+                                    aria-label="Dismiss balance alert"
+                                >
+                                    x
+                                </button>
+                            </div>
+                        )}
+                        {submitError && (
+                            <div className="floating-notice floating-notice-error" role="alert">
+                                <span>{submitError}</span>
+                                <button
+                                    type="button"
+                                    className="floating-notice-close"
+                                    onClick={onDismissSubmitError}
+                                    aria-label="Dismiss submit error"
+                                >
+                                    x
+                                </button>
+                            </div>
+                        )}
+                        {submitSuccess && (
+                            <div
+                                className="floating-notice floating-notice-success"
+                                role="status"
+                            >
+                                <span>{submitSuccess}</span>
+                                <button
+                                    type="button"
+                                    className="floating-notice-close"
+                                    onClick={onDismissSubmitSuccess}
+                                    aria-label="Dismiss submit success"
+                                >
+                                    x
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
+
                 <section className="control-section">
                     <label className="field-label" htmlFor="user-select">
                         User
@@ -135,10 +167,6 @@ const TaskComposer = ({
                     <div className="notice notice-warning">{noModelsNotice}</div>
                 )}
                 {screenError && <div className="notice notice-error">{screenError}</div>}
-                {submitError && <div className="notice notice-error">{submitError}</div>}
-                {submitSuccess && (
-                    <div className="notice notice-success">{submitSuccess}</div>
-                )}
 
                 <button
                     type="submit"

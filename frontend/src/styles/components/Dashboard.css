@@ -128,12 +128,18 @@
     color: #fde68a;
 }
 
-.floating-notice {
+.floating-notice-stack {
     position: absolute;
     top: 20px;
     right: 20px;
     left: 20px;
     z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.floating-notice {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
@@ -149,6 +155,12 @@
     border-color: rgba(248, 113, 113, 0.28);
     background: rgba(69, 10, 10, 0.9);
     color: #fecaca;
+}
+
+.floating-notice-success {
+    border-color: rgba(74, 222, 128, 0.22);
+    background: rgba(6, 78, 59, 0.9);
+    color: #bbf7d0;
 }
 
 .floating-notice-close {

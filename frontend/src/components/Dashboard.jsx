@@ -174,6 +174,18 @@ const Dashboard = () => {
     }, [selectedUserId, statusFilter]);
 
     useEffect(() => {
+        if (!submitError) {
+            return undefined;
+        }
+
+        const timeoutId = window.setTimeout(() => {
+            setSubmitError("");
+        }, 4200);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [submitError]);
+
+    useEffect(() => {
         if (!submitSuccess) {
             return undefined;
         }
@@ -326,6 +338,8 @@ const Dashboard = () => {
                 balanceAlert={balanceAlert}
                 metricFlashToken={metricFlashToken}
                 submitLoading={submitLoading}
+                onDismissSubmitError={() => setSubmitError("")}
+                onDismissSubmitSuccess={() => setSubmitSuccess("")}
                 onDismissBalanceAlert={() => setBalanceAlert("")}
                 onUserChange={handleUserChange}
                 onModelChange={handleModelChange}
