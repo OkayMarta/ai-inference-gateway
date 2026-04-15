@@ -31,7 +31,7 @@ func main() {
 
 	userSvc := services.NewUserService(userRepo)
 	modelSvc := services.NewModelService(modelRepo)
-	inferenceSvc := services.NewInferenceService(userRepo, modelRepo, taskRepo, txRepo)
+	inferenceSvc := services.NewInferenceService(postgresDB, userRepo, modelRepo, taskRepo, txRepo)
 	workerSvc := services.NewWorkerService(workerRepo, taskRepo, modelRepo, ollama)
 	workerSvc.Start()
 

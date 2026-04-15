@@ -9,6 +9,15 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// DBTX описує мінімальний контракт для виконання SQL-запитів як через *sql.DB,
+// так і через *sql.Tx. Це дозволяє сервісному шару керувати транзакцією, а
+// репозиторіям лишатись тонким шаром доступу до даних.
+type DBTX interface {
+	Exec(query string, args ...any) (sql.Result, error)
+	Query(query string, args ...any) (*sql.Rows, error)
+	QueryRow(query string, args ...any) *sql.Row
+}
+
 // InitDB ініціалізує підключення до PostgreSQL на основі змінних середовища.
 func InitDB() (*sql.DB, error) {
 	host := os.Getenv("DB_HOST")

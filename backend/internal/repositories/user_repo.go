@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	appdb "ai-inference-gateway/internal/db"
 	"ai-inference-gateway/internal/models"
 )
 
@@ -44,9 +45,17 @@ func (r *UserRepository) GetAll() ([]*models.User, error) {
 }
 
 func (r *UserRepository) GetByID(id string) (*models.User, error) {
+	return r.getByID(r.db, id)
+}
+
+func (r *UserRepository) GetByIDTx(tx appdb.DBTX, id string) (*models.User, error) {
+	return r.getByID(tx, id)
+}
+
+func (r *UserRepository) getByID(exec appdb.DBTX, id string) (*models.User, error) {
 	user := &models.User{}
 
-	err := r.db.QueryRow(`
+	err := exec.QueryRow(`
 		SELECT id, username, token_balance
 		FROM users
 		WHERE id = $1
@@ -108,7 +117,15 @@ func (r *UserRepository) Delete(id string) error {
 }
 
 func (r *UserRepository) UpdateBalance(id string, balance float64) error {
-	result, err := r.db.Exec(`
+	return r.updateBalance(r.db, id, balance)
+}
+
+func (r *UserRepository) UpdateBalanceTx(tx appdb.DBTX, id string, balance float64) error {
+	return r.updateBalance(tx, id, balance)
+}
+
+func (r *UserRepository) updateBalance(exec appdb.DBTX, id string, balance float64) error {
+	result, err := exec.Exec(`
 		UPDATE users
 		SET token_balance = $2
 		WHERE id = $1

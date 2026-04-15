@@ -1,6 +1,9 @@
 package services
 
-import "ai-inference-gateway/internal/models"
+import (
+	appdb "ai-inference-gateway/internal/db"
+	"ai-inference-gateway/internal/models"
+)
 
 // TaskListFilter описує базові параметри вибірки задач.
 // Структура навмисно проста: її зручно мапити як на in-memory фільтрацію, так і на майбутні SQL WHERE / ORDER BY / LIMIT / OFFSET запити.
@@ -17,10 +20,12 @@ type TaskListFilter struct {
 type UserRepository interface {
 	GetAll() ([]*models.User, error)
 	GetByID(id string) (*models.User, error)
+	GetByIDTx(tx appdb.DBTX, id string) (*models.User, error)
 	Create(user *models.User) error
 	Update(user *models.User) error
 	Delete(id string) error
 	UpdateBalance(id string, balance float64) error
+	UpdateBalanceTx(tx appdb.DBTX, id string, balance float64) error
 }
 
 // ModelRepository описує доступ до AI-моделей як до повноцінних persistent entities.
@@ -28,6 +33,7 @@ type UserRepository interface {
 type ModelRepository interface {
 	GetAll() ([]*models.AIModel, error)
 	GetByID(id string) (*models.AIModel, error)
+	GetByIDTx(tx appdb.DBTX, id string) (*models.AIModel, error)
 	Create(model *models.AIModel) error
 	Update(model *models.AIModel) error
 	Delete(id string) error
@@ -39,6 +45,7 @@ type TaskRepository interface {
 	GetByID(id string) (*models.PromptTask, error)
 	List(filter TaskListFilter) ([]*models.PromptTask, error)
 	Create(task *models.PromptTask) error
+	CreateTx(tx appdb.DBTX, task *models.PromptTask) error
 	Update(task *models.PromptTask) error
 	Delete(id string) error
 	Complete(id, result string) error
@@ -50,6 +57,7 @@ type TaskRepository interface {
 // Створення транзакції теж може падати, тому повертається error.
 type TransactionRepository interface {
 	Create(tx *models.Transaction) error
+	CreateTx(exec appdb.DBTX, tx *models.Transaction) error
 }
 
 // WorkerRepository описує доступ до воркерів у DB-friendly стилі.

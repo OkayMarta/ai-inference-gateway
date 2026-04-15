@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	appdb "ai-inference-gateway/internal/db"
 	"ai-inference-gateway/internal/models"
 )
 
@@ -44,9 +45,17 @@ func (r *ModelRepository) GetAll() ([]*models.AIModel, error) {
 }
 
 func (r *ModelRepository) GetByID(id string) (*models.AIModel, error) {
+	return r.getByID(r.db, id)
+}
+
+func (r *ModelRepository) GetByIDTx(tx appdb.DBTX, id string) (*models.AIModel, error) {
+	return r.getByID(tx, id)
+}
+
+func (r *ModelRepository) getByID(exec appdb.DBTX, id string) (*models.AIModel, error) {
 	model := &models.AIModel{}
 
-	err := r.db.QueryRow(`
+	err := exec.QueryRow(`
 		SELECT id, name, description, token_cost
 		FROM ai_models
 		WHERE id = $1

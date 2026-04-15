@@ -1,7 +1,9 @@
 package services
 
 import (
+	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -11,6 +13,7 @@ import (
 
 // InferenceService coordinates billing and task orchestration.
 type InferenceService struct {
+	db        *sql.DB
 	userRepo  UserRepository
 	modelRepo ModelRepository
 	taskRepo  TaskRepository
@@ -18,12 +21,14 @@ type InferenceService struct {
 }
 
 func NewInferenceService(
+	db *sql.DB,
 	userRepo UserRepository,
 	modelRepo ModelRepository,
 	taskRepo TaskRepository,
 	txRepo TransactionRepository,
 ) *InferenceService {
 	return &InferenceService{
+		db:        db,
 		userRepo:  userRepo,
 		modelRepo: modelRepo,
 		taskRepo:  taskRepo,
@@ -38,16 +43,23 @@ func generateID() string {
 }
 
 func (s *InferenceService) SubmitPrompt(userID, modelID, payload string) (*models.PromptTask, error) {
-	user, err := s.userRepo.GetByID(userID)
+	tx, err := s.db.BeginTx(context.Background(), nil)
 	if err != nil {
+		return nil, fmt.Errorf("begin submit prompt transaction: %w", err)
+	}
+
+	user, err := s.userRepo.GetByIDTx(tx, userID)
+	if err != nil {
+		_ = tx.Rollback()
 		if isRepoNotFoundError(err, "user not found:") {
 			return nil, ErrUserNotFound
 		}
 		return nil, err
 	}
 
-	model, err := s.modelRepo.GetByID(modelID)
+	model, err := s.modelRepo.GetByIDTx(tx, modelID)
 	if err != nil {
+		_ = tx.Rollback()
 		if isRepoNotFoundError(err, "model not found:") {
 			return nil, ErrModelNotFound
 		}
@@ -55,10 +67,12 @@ func (s *InferenceService) SubmitPrompt(userID, modelID, payload string) (*model
 	}
 
 	if user.TokenBalance < model.TokenCost {
+		_ = tx.Rollback()
 		return nil, ErrInsufficientBalance
 	}
 
-	if err := s.userRepo.UpdateBalance(userID, user.TokenBalance-model.TokenCost); err != nil {
+	if err := s.userRepo.UpdateBalanceTx(tx, userID, user.TokenBalance-model.TokenCost); err != nil {
+		_ = tx.Rollback()
 		return nil, fmt.Errorf("failed to update balance: %w", err)
 	}
 
@@ -69,19 +83,25 @@ func (s *InferenceService) SubmitPrompt(userID, modelID, payload string) (*model
 		Payload: payload,
 		Status:  models.StatusQueued,
 	}
-	if err := s.taskRepo.Create(task); err != nil {
+	if err := s.taskRepo.CreateTx(tx, task); err != nil {
+		_ = tx.Rollback()
 		return nil, fmt.Errorf("failed to create task: %w", err)
 	}
 
-	tx := &models.Transaction{
+	txRecord := &models.Transaction{
 		ID:     generateID(),
 		UserID: userID,
 		TaskID: task.ID,
 		Amount: model.TokenCost,
 		Type:   "charge",
 	}
-	if err := s.txRepo.Create(tx); err != nil {
+	if err := s.txRepo.CreateTx(tx, txRecord); err != nil {
+		_ = tx.Rollback()
 		return nil, fmt.Errorf("failed to create transaction: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit submit prompt transaction: %w", err)
 	}
 
 	return task, nil

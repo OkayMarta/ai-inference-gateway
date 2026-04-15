@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	appdb "ai-inference-gateway/internal/db"
 	"ai-inference-gateway/internal/models"
 	"ai-inference-gateway/internal/services"
 
@@ -113,8 +114,16 @@ func (r *TaskRepository) List(filter services.TaskListFilter) ([]*models.PromptT
 }
 
 func (r *TaskRepository) Create(task *models.PromptTask) error {
+	return r.create(r.db, task)
+}
+
+func (r *TaskRepository) CreateTx(tx appdb.DBTX, task *models.PromptTask) error {
+	return r.create(tx, task)
+}
+
+func (r *TaskRepository) create(exec appdb.DBTX, task *models.PromptTask) error {
 	if task.CreatedAt.IsZero() {
-		if err := r.db.QueryRow(`
+		if err := exec.QueryRow(`
 			INSERT INTO prompt_tasks (id, user_id, model_id, payload, status, result)
 			VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''))
 			RETURNING created_at
@@ -124,7 +133,7 @@ func (r *TaskRepository) Create(task *models.PromptTask) error {
 		return nil
 	}
 
-	_, err := r.db.Exec(`
+	_, err := exec.Exec(`
 		INSERT INTO prompt_tasks (id, user_id, model_id, payload, status, result, created_at)
 		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), $7)
 	`, task.ID, task.UserID, task.ModelID, task.Payload, task.Status, task.Result, task.CreatedAt)
