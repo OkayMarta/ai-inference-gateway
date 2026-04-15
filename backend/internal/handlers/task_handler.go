@@ -28,12 +28,12 @@ func (h *TaskHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	var req submitRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "Invalid request body")
+		respondError(w, r, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
 	if req.UserID == "" || req.ModelID == "" || req.Payload == "" {
-		respondError(w, http.StatusBadRequest, "userId, modelId, and payload are required")
+		respondError(w, r, http.StatusBadRequest, "userId, modelId, and payload are required")
 		return
 	}
 
@@ -41,11 +41,11 @@ func (h *TaskHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrUserNotFound), errors.Is(err, services.ErrModelNotFound):
-			respondError(w, http.StatusNotFound, err.Error())
+			respondError(w, r, http.StatusNotFound, err.Error())
 		case errors.Is(err, services.ErrInsufficientBalance):
-			respondError(w, http.StatusUnprocessableEntity, err.Error())
+			respondError(w, r, http.StatusUnprocessableEntity, err.Error())
 		default:
-			respondError(w, http.StatusInternalServerError, "Internal server error")
+			respondError(w, r, http.StatusInternalServerError, "Internal server error")
 		}
 		return
 	}
@@ -57,9 +57,10 @@ func (h *TaskHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	task, err := h.inference.GetTaskByID(id)
 	if err != nil {
-		respondError(w, http.StatusNotFound, err.Error())
+		respondError(w, r, http.StatusNotFound, err.Error())
 		return
 	}
+
 	respondJSON(w, http.StatusOK, task)
 }
 

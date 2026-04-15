@@ -3,20 +3,14 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 )
 
-type APIError struct {
-	Error   string `json:"error"`
-	Message string `json:"message"`
-	Status  int    `json:"status"`
-}
-
-func newAPIError(status int, message string) APIError {
-	return APIError{
-		Error:   http.StatusText(status),
-		Message: message,
-		Status:  status,
-	}
+type ErrorResponse struct {
+	Timestamp string `json:"timestamp"`
+	Status    int    `json:"status"`
+	Message   string `json:"message"`
+	Path      string `json:"path"`
 }
 
 func respondJSON(w http.ResponseWriter, status int, data interface{}) {
@@ -25,15 +19,25 @@ func respondJSON(w http.ResponseWriter, status int, data interface{}) {
 	_ = json.NewEncoder(w).Encode(data)
 }
 
-func respondError(w http.ResponseWriter, status int, message string) {
-	respondJSON(w, status, newAPIError(status, message))
+func respondError(w http.ResponseWriter, r *http.Request, status int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+
+	response := ErrorResponse{
+		Timestamp: time.Now().Format(time.RFC3339),
+		Status:    status,
+		Message:   message,
+		Path:      r.URL.Path,
+	}
+
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 func RecoveryMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if recover() != nil {
-				respondError(w, http.StatusInternalServerError, "Internal server error")
+				respondError(w, r, http.StatusInternalServerError, "Internal server error")
 			}
 		}()
 

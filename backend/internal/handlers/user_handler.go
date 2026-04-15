@@ -23,13 +23,12 @@ func (h *UserHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 
 // GetByID обробляє запит GET /api/users/{id}
 func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
-	// chi.URLParam дістає значення {id} прямо з URL-адреси
 	id := chi.URLParam(r, "id")
 	user, err := h.service.GetByID(id)
 	if err != nil {
-		// Якщо сервіс повернув помилку (наприклад, юзера немає), віддаємо 404
-		respondError(w, http.StatusNotFound, err.Error())
+		respondError(w, r, http.StatusNotFound, err.Error())
 		return
 	}
+
 	respondJSON(w, http.StatusOK, user)
 }
