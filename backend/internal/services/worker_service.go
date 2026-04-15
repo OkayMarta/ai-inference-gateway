@@ -126,7 +126,7 @@ func (s *WorkerService) executeTask(modelID, payload string) (string, error) {
 			return response, nil
 		}
 		log.Printf("[WorkerService] Ollama error: %v", err)
-		return "", fmt.Errorf("task execution failed: ollama unavailable")
+		return "", fmt.Errorf("task execution failed: ollama unavailable: %w", err)
 	}
 
 	return "", fmt.Errorf("task execution failed: ollama client is not configured")
