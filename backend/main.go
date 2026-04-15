@@ -8,24 +8,29 @@ import (
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 
+	dbpkg "ai-inference-gateway/internal/db"
 	"ai-inference-gateway/internal/handlers"
-	"ai-inference-gateway/internal/models"
 	"ai-inference-gateway/internal/repositories"
 	"ai-inference-gateway/internal/services"
 )
 
 func main() {
-	// Repositories
-	userRepo := repositories.NewUserRepository()
-	modelRepo := repositories.NewModelRepository()
-	taskRepo := repositories.NewTaskRepository()
-	txRepo := repositories.NewTransactionRepository()
-	workerRepo := repositories.NewWorkerRepository()
-	ollama := services.NewOllamaClient("http://localhost:11434")
+	// Database
+	postgresDB, err := dbpkg.InitDB()
+	if err != nil {
+		log.Fatalf("failed to initialize PostgreSQL connection: %v", err)
+	}
+	defer postgresDB.Close()
 
-	// Temporary in-memory bootstrap.
-	// Users and models are expected to come from SQL migrations in Lab 3.
-	seedWorkers(workerRepo)
+	// Repositories
+	userRepo := repositories.NewUserRepository(postgresDB)
+	modelRepo := repositories.NewModelRepository(postgresDB)
+	taskRepo := repositories.NewTaskRepository(postgresDB)
+	txRepo := repositories.NewTransactionRepository(postgresDB)
+	workerRepo := repositories.NewWorkerRepository(postgresDB)
+
+	// External clients
+	ollama := services.NewOllamaClient("http://localhost:11434")
 
 	// Services
 	userSvc := services.NewUserService(userRepo)
@@ -66,19 +71,8 @@ func main() {
 		r.Get("/tasks", taskH.List)
 	})
 
-	// Server start
-	log.Println("AI Inference Gateway Р·Р°РїСѓС‰РµРЅРѕ РЅР° http://localhost:8080")
+	log.Println("AI Inference Gateway запущено на http://localhost:8080")
 	if err := http.ListenAndServe(":8080", r); err != nil {
-		log.Fatalf("РџРѕРјРёР»РєР° Р·Р°РїСѓСЃРєСѓ СЃРµСЂРІРµСЂР°: %v", err)
+		log.Fatalf("помилка запуску сервера: %v", err)
 	}
-}
-
-func seedWorkers(workerRepo *repositories.WorkerRepository) {
-	// Тимчасово лишаємо in-memory воркерів, але перелік model ID більше не формується під час старту застосунку. Ці ID мають відповідати seed-даним БД.
-	supportedModelIDs := []string{"model-1", "model-2", "model-3", "model-4"}
-
-	workerRepo.Create(&models.WorkerNode{ID: "worker-1", SupportedModels: supportedModelIDs, Status: models.WorkerIdle})
-	workerRepo.Create(&models.WorkerNode{ID: "worker-2", SupportedModels: supportedModelIDs, Status: models.WorkerIdle})
-	workerRepo.Create(&models.WorkerNode{ID: "worker-3", SupportedModels: supportedModelIDs, Status: models.WorkerIdle})
-	log.Println("Seed: Р”РѕРґР°РЅРѕ 3 С„РѕРЅРѕРІС– РІРѕСЂРєРµСЂРё")
 }
