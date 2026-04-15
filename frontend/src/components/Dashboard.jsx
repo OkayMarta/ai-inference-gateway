@@ -31,6 +31,8 @@ const Dashboard = () => {
     const [screenError, setScreenError] = useState("");
     const [submitError, setSubmitError] = useState("");
     const [submitSuccess, setSubmitSuccess] = useState("");
+    const [balanceAlert, setBalanceAlert] = useState("");
+    const [metricFlashToken, setMetricFlashToken] = useState(0);
 
     const currentUser = useMemo(
         () => users.find((user) => user.id === selectedUserId) || null,
@@ -183,10 +185,23 @@ const Dashboard = () => {
         return () => window.clearTimeout(timeoutId);
     }, [submitSuccess]);
 
+    useEffect(() => {
+        if (!balanceAlert) {
+            return undefined;
+        }
+
+        const timeoutId = window.setTimeout(() => {
+            setBalanceAlert("");
+        }, 4200);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [balanceAlert]);
+
     const handleUserChange = (event) => {
         setSelectedUserId(event.target.value);
         setSubmitError("");
         setSubmitSuccess("");
+        setBalanceAlert("");
         setScreenError("");
     };
 
@@ -194,6 +209,7 @@ const Dashboard = () => {
         setSelectedModelId(event.target.value);
         setSubmitError("");
         setSubmitSuccess("");
+        setBalanceAlert("");
     };
 
     const handlePromptChange = (event) => {
@@ -216,6 +232,7 @@ const Dashboard = () => {
         setSubmitLoading(true);
         setSubmitError("");
         setSubmitSuccess("");
+        setBalanceAlert("");
 
         try {
             await api.submitTask(selectedUserId, selectedModelId, prompt.trim());
@@ -236,7 +253,12 @@ const Dashboard = () => {
             setPrompt("");
             setSubmitSuccess("Task submitted.");
         } catch (error) {
-            setSubmitError(error.message);
+            if (error.message === "insufficient token balance") {
+                setBalanceAlert("Insufficient token balance.");
+                setMetricFlashToken((value) => value + 1);
+            } else {
+                setSubmitError(error.message);
+            }
         } finally {
             setSubmitLoading(false);
         }
@@ -301,7 +323,10 @@ const Dashboard = () => {
                 screenError={composerScreenError}
                 submitError={submitError}
                 submitSuccess={submitSuccess}
+                balanceAlert={balanceAlert}
+                metricFlashToken={metricFlashToken}
                 submitLoading={submitLoading}
+                onDismissBalanceAlert={() => setBalanceAlert("")}
                 onUserChange={handleUserChange}
                 onModelChange={handleModelChange}
                 onPromptChange={handlePromptChange}

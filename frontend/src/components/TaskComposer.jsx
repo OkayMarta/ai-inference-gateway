@@ -12,7 +12,10 @@ const TaskComposer = ({
     screenError,
     submitError,
     submitSuccess,
+    balanceAlert,
+    metricFlashToken,
     submitLoading,
+    onDismissBalanceAlert,
     onUserChange,
     onModelChange,
     onPromptChange,
@@ -24,6 +27,23 @@ const TaskComposer = ({
     return (
         <SectionCard as="aside" className="control-panel">
             <form className="control-form" onSubmit={onSubmit}>
+                {balanceAlert && (
+                    <div
+                        className="floating-notice floating-notice-error"
+                        role="alert"
+                        aria-live="assertive"
+                    >
+                        <span>{balanceAlert}</span>
+                        <button
+                            type="button"
+                            className="floating-notice-close"
+                            onClick={onDismissBalanceAlert}
+                            aria-label="Dismiss balance alert"
+                        >
+                            ×
+                        </button>
+                    </div>
+                )}
                 <section className="control-section">
                     <label className="field-label" htmlFor="user-select">
                         User
@@ -68,13 +88,19 @@ const TaskComposer = ({
                 </section>
 
                 <section className="metrics-grid">
-                    <div className="metric-card">
+                    <div
+                        key={`balance-${metricFlashToken}`}
+                        className={`metric-card${balanceAlert ? " metric-card-alert" : ""}`}
+                    >
                         <span className="metric-label">Balance</span>
                         <span className="metric-value">
                             {currentUser ? currentUser.tokenBalance.toFixed(1) : "-"}
                         </span>
                     </div>
-                    <div className="metric-card">
+                    <div
+                        key={`cost-${metricFlashToken}`}
+                        className={`metric-card${balanceAlert ? " metric-card-alert" : ""}`}
+                    >
                         <span className="metric-label">Model cost</span>
                         <span className="metric-value">
                             {currentModel ? currentModel.tokenCost.toFixed(1) : "-"}

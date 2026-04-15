@@ -18,6 +18,7 @@
 }
 
 .control-panel {
+    position: relative;
     overflow: hidden;
     padding-bottom: 28px;
 }
@@ -81,6 +82,10 @@
     background: var(--color-surface-muted);
 }
 
+.metric-card-alert {
+    animation: metric-balance-alert 1.2s ease-in-out 3;
+}
+
 .metric-label {
     display: block;
     color: var(--color-text-muted);
@@ -121,6 +126,45 @@
     border-color: rgba(250, 204, 21, 0.24);
     background: rgba(250, 204, 21, 0.1);
     color: #fde68a;
+}
+
+.floating-notice {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    left: 20px;
+    z-index: 2;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    box-shadow: 0 18px 40px rgba(2, 6, 23, 0.34);
+    backdrop-filter: blur(10px);
+}
+
+.floating-notice-error {
+    border-color: rgba(248, 113, 113, 0.28);
+    background: rgba(69, 10, 10, 0.9);
+    color: #fecaca;
+}
+
+.floating-notice-close {
+    flex: 0 0 auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.78;
+}
+
+.floating-notice-close:hover {
+    opacity: 1;
 }
 
 .notice-quiet {
@@ -320,6 +364,22 @@
     line-height: 1.7;
     white-space: pre-wrap;
     word-break: break-word;
+}
+
+@keyframes metric-balance-alert {
+    0%,
+    100% {
+        border-color: rgba(148, 163, 184, 0.14);
+        background: var(--color-surface-muted);
+        box-shadow: none;
+    }
+
+    30%,
+    70% {
+        border-color: rgba(248, 113, 113, 0.72);
+        background: rgba(127, 29, 29, 0.38);
+        box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.18);
+    }
 }
 
 @media (min-width: 768px) {
