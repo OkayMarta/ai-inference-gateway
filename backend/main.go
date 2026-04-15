@@ -36,6 +36,19 @@ func main() {
 
 	userSvc := services.NewUserService(userRepo)
 	modelSvc := services.NewModelService(modelRepo, ollama)
+
+	log.Println("synchronizing models from Ollama...")
+	if err := modelSvc.SyncFromOllama(); err != nil {
+		log.Printf("failed to synchronize models from Ollama: %v", err)
+	} else {
+		syncedModels, err := modelSvc.GetAll()
+		if err != nil {
+			log.Printf("models synchronized from Ollama, but failed to load synced catalog: %v", err)
+		} else {
+			log.Printf("successfully synchronized %d models from Ollama", len(syncedModels))
+		}
+	}
+
 	inferenceSvc := services.NewInferenceService(postgresDB, userRepo, modelRepo, taskRepo, txRepo)
 	workerSvc := services.NewWorkerService(workerRepo, taskRepo, modelRepo, ollama)
 	workerSvc.Start()
