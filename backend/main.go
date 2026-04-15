@@ -1,10 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
@@ -25,10 +23,9 @@ func main() {
 	workerRepo := repositories.NewWorkerRepository()
 	ollama := services.NewOllamaClient("http://localhost:11434")
 
-	// Seed
-	seedUsers(userRepo)
-	loadModels(ollama, modelRepo)
-	seedWorkers(workerRepo, modelRepo)
+	// Temporary in-memory bootstrap.
+	// Users and models are expected to come from SQL migrations in Lab 3.
+	seedWorkers(workerRepo)
 
 	// Services
 	userSvc := services.NewUserService(userRepo)
@@ -70,120 +67,18 @@ func main() {
 	})
 
 	// Server start
-	log.Println("AI Inference Gateway запущено на http://localhost:8080")
+	log.Println("AI Inference Gateway Р·Р°РїСѓС‰РµРЅРѕ РЅР° http://localhost:8080")
 	if err := http.ListenAndServe(":8080", r); err != nil {
-		log.Fatalf("Помилка запуску сервера: %v", err)
+		log.Fatalf("РџРѕРјРёР»РєР° Р·Р°РїСѓСЃРєСѓ СЃРµСЂРІРµСЂР°: %v", err)
 	}
 }
 
-// Seed helpers
+func seedWorkers(workerRepo *repositories.WorkerRepository) {
+	// Тимчасово лишаємо in-memory воркерів, але перелік model ID більше не формується під час старту застосунку. Ці ID мають відповідати seed-даним БД.
+	supportedModelIDs := []string{"model-1", "model-2", "model-3", "model-4"}
 
-func seedUsers(repo *repositories.UserRepository) {
-	repo.Create(&models.User{ID: "user-1", Username: "alice", TokenBalance: 100})
-	repo.Create(&models.User{ID: "user-2", Username: "bob", TokenBalance: 5})
-	repo.Create(&models.User{ID: "user-3", Username: "charlie", TokenBalance: 200})
-	log.Println("Seed: Додано 3 користувачі")
-}
-
-func loadModels(ollama *services.OllamaClient, repo *repositories.ModelRepository) {
-	ollamaModels, err := ollama.ListModels()
-	if err != nil {
-		log.Printf("Ollama недоступна: %v", err)
-		log.Println("Завантажуємо базові (симульовані) моделі...")
-		seedDefaultModels(repo)
-		return
-	}
-
-	if len(ollamaModels) == 0 {
-		log.Println("В Ollama немає завантажених моделей. Використовуємо базові...")
-		seedDefaultModels(repo)
-		return
-	}
-
-	for _, m := range ollamaModels {
-		id := sanitizeID(m.Name)
-		cost := costBySize(m.Size)
-		repo.Create(&models.AIModel{
-			ID:          id,
-			Name:        m.Name,
-			Description: fmt.Sprintf("Ollama модель · %s", formatSize(m.Size)),
-			TokenCost:   cost,
-		})
-	}
-
-	log.Printf("Завантажено %d моделей з Ollama", len(ollamaModels))
-}
-
-func seedDefaultModels(repo *repositories.ModelRepository) {
-	repo.Create(&models.AIModel{
-		ID:          "model-1",
-		Name:        "Llama-3",
-		Description: "Велика мовна модель для генерації тексту",
-		TokenCost:   5,
-	})
-	repo.Create(&models.AIModel{
-		ID:          "model-2",
-		Name:        "Stable-Diffusion",
-		Description: "Модель для генерації зображень з тексту",
-		TokenCost:   10,
-	})
-	repo.Create(&models.AIModel{
-		ID:          "model-3",
-		Name:        "Whisper",
-		Description: "Модель розпізнавання мовлення (Speech-to-text)",
-		TokenCost:   3,
-	})
-	repo.Create(&models.AIModel{
-		ID:          "model-4",
-		Name:        "GPT-4o",
-		Description: "Просунута мультимодальна ШІ-модель",
-		TokenCost:   15,
-	})
-	log.Println("Seed: Додано 4 базові (симульовані) моделі")
-}
-
-func seedWorkers(workerRepo *repositories.WorkerRepository, modelRepo *repositories.ModelRepository) {
-	allModels := modelRepo.GetAll()
-
-	ids := make([]string, len(allModels))
-	for i, m := range allModels {
-		ids[i] = m.ID
-	}
-
-	workerRepo.Create(&models.WorkerNode{ID: "worker-1", SupportedModels: ids, Status: models.WorkerIdle})
-	workerRepo.Create(&models.WorkerNode{ID: "worker-2", SupportedModels: ids, Status: models.WorkerIdle})
-	workerRepo.Create(&models.WorkerNode{ID: "worker-3", SupportedModels: ids, Status: models.WorkerIdle})
-	log.Println("Seed: Додано 3 фонові воркери")
-}
-
-// Utility helpers
-
-func sanitizeID(name string) string {
-	s := strings.ReplaceAll(name, ":", "-")
-	s = strings.ReplaceAll(s, "/", "-")
-	return s
-}
-
-func costBySize(bytes int64) float64 {
-	gb := float64(bytes) / (1024 * 1024 * 1024)
-	switch {
-	case gb < 2:
-		return 3
-	case gb < 5:
-		return 5
-	case gb < 15:
-		return 10
-	default:
-		return 15
-	}
-}
-
-func formatSize(bytes int64) string {
-	gb := float64(bytes) / (1024 * 1024 * 1024)
-	if gb >= 1 {
-		return fmt.Sprintf("%.1f GB", gb)
-	}
-
-	mb := float64(bytes) / (1024 * 1024)
-	return fmt.Sprintf("%.0f MB", mb)
+	workerRepo.Create(&models.WorkerNode{ID: "worker-1", SupportedModels: supportedModelIDs, Status: models.WorkerIdle})
+	workerRepo.Create(&models.WorkerNode{ID: "worker-2", SupportedModels: supportedModelIDs, Status: models.WorkerIdle})
+	workerRepo.Create(&models.WorkerNode{ID: "worker-3", SupportedModels: supportedModelIDs, Status: models.WorkerIdle})
+	log.Println("Seed: Р”РѕРґР°РЅРѕ 3 С„РѕРЅРѕРІС– РІРѕСЂРєРµСЂРё")
 }
