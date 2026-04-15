@@ -3,7 +3,6 @@ package services
 import (
 	"fmt"
 	"log"
-	"math/rand"
 	"strings"
 	"time"
 
@@ -105,12 +104,11 @@ func (s *WorkerService) executeTask(modelID, payload string) (string, error) {
 		if err == nil {
 			return response, nil
 		}
-		log.Printf("[WorkerService] Ollama error, falling back to simulation: %v", err)
+		log.Printf("[WorkerService] Ollama error: %v", err)
+		return "", fmt.Errorf("task execution failed: ollama unavailable")
 	}
 
-	delay := time.Duration(2+rand.Intn(4)) * time.Second
-	time.Sleep(delay)
-	return fmt.Sprintf("[Симуляція] Відповідь на запит \"%s\" від моделі %s. Згенеровано за %v", payload, aiModel.Name, delay), nil
+	return "", fmt.Errorf("task execution failed: ollama client is not configured")
 }
 
 // shouldSimulateFailure is used only for testing and demo scenarios.
