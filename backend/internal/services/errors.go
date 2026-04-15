@@ -14,6 +14,7 @@ var (
 	ErrTaskCannotBeDeleted = errors.New("task cannot be deleted")
 	ErrInvalidPagination   = errors.New("invalid pagination")
 	ErrUserUpdateNotAllowed = errors.New("user update not allowed")
+	ErrInvalidUserUpdate    = errors.New("invalid user update")
 )
 
 // Репозиторії поки повертають текстові not found помилки, тому тимчасово

@@ -54,6 +54,8 @@ func mapErrorToStatus(err error) int {
 		return http.StatusBadRequest
 	case errors.Is(err, services.ErrUserUpdateNotAllowed):
 		return http.StatusForbidden
+	case errors.Is(err, services.ErrInvalidUserUpdate):
+		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError
 	}

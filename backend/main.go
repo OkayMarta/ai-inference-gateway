@@ -63,6 +63,7 @@ func main() {
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/users", userH.GetAll)
 		r.Get("/users/{id}", userH.GetByID)
+		r.Put("/users/{id}", userH.Update)
 
 		r.Get("/models", modelH.GetAll)
 
