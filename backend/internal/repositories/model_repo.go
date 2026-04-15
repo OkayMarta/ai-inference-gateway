@@ -22,6 +22,7 @@ func (r *ModelRepository) GetAll() ([]*models.AIModel, error) {
 	rows, err := r.db.Query(`
 		SELECT id, name, description, token_cost
 		FROM ai_models
+		WHERE is_active = TRUE
 		ORDER BY name, id
 	`)
 	if err != nil {
@@ -73,8 +74,8 @@ func (r *ModelRepository) getByID(exec appdb.DBTX, id string) (*models.AIModel, 
 
 func (r *ModelRepository) Create(model *models.AIModel) error {
 	_, err := r.db.Exec(`
-		INSERT INTO ai_models (id, name, description, token_cost)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO ai_models (id, name, description, token_cost, is_active)
+		VALUES ($1, $2, $3, $4, TRUE)
 	`, model.ID, model.Name, model.Description, model.TokenCost)
 	if err != nil {
 		return fmt.Errorf("create model %s: %w", model.ID, err)
@@ -91,12 +92,13 @@ func (r *ModelRepository) ReplaceAll(models []*models.AIModel) error {
 
 	for _, model := range models {
 		if _, err := tx.Exec(`
-			INSERT INTO ai_models (id, name, description, token_cost)
-			VALUES ($1, $2, $3, $4)
+			INSERT INTO ai_models (id, name, description, token_cost, is_active)
+			VALUES ($1, $2, $3, $4, TRUE)
 			ON CONFLICT (id) DO UPDATE
 			SET name = EXCLUDED.name,
 			    description = EXCLUDED.description,
-			    token_cost = EXCLUDED.token_cost
+			    token_cost = EXCLUDED.token_cost,
+			    is_active = TRUE
 		`, model.ID, model.Name, model.Description, model.TokenCost); err != nil {
 			_ = tx.Rollback()
 			return fmt.Errorf("upsert synced model %s: %w", model.ID, err)
@@ -116,10 +118,23 @@ func (r *ModelRepository) ReplaceAll(models []*models.AIModel) error {
 }
 
 func pruneObsoleteModels(tx *sql.Tx, models []*models.AIModel) error {
-	// З БД видаляємо лише моделі, яких більше немає в актуальному Ollama sync
-	// і які вже не використовуються історичними prompt_tasks. Це не ламає FK
-	// і зберігає цілісність уже створених задач.
+	// Актуальні Ollama-моделі залишаються active/selectable.
+	// Моделі поза sync:
+	// - якщо на них є історичні задачі, лишаємо рядок і ставимо is_active = FALSE
+	// - якщо не використовуються, безпечно видаляємо
 	if len(models) == 0 {
+		if _, err := tx.Exec(`
+			UPDATE ai_models AS m
+			SET is_active = FALSE
+			WHERE EXISTS (
+				SELECT 1
+				FROM prompt_tasks AS t
+				WHERE t.model_id = m.id
+			)
+		`); err != nil {
+			return fmt.Errorf("mark historical models inactive after empty sync: %w", err)
+		}
+
 		if _, err := tx.Exec(`
 			DELETE FROM ai_models AS m
 			WHERE NOT EXISTS (
@@ -142,6 +157,21 @@ func pruneObsoleteModels(tx *sql.Tx, models []*models.AIModel) error {
 	}
 
 	query := fmt.Sprintf(`
+		UPDATE ai_models AS m
+		SET is_active = FALSE
+		WHERE m.id NOT IN (%s)
+		  AND EXISTS (
+			SELECT 1
+			FROM prompt_tasks AS t
+			WHERE t.model_id = m.id
+		  )
+	`, strings.Join(placeholders, ", "))
+
+	if _, err := tx.Exec(query, args...); err != nil {
+		return fmt.Errorf("mark historical models inactive: %w", err)
+	}
+
+	query = fmt.Sprintf(`
 		DELETE FROM ai_models AS m
 		WHERE m.id NOT IN (%s)
 		  AND NOT EXISTS (
@@ -152,7 +182,7 @@ func pruneObsoleteModels(tx *sql.Tx, models []*models.AIModel) error {
 	`, strings.Join(placeholders, ", "))
 
 	if _, err := tx.Exec(query, args...); err != nil {
-		return fmt.Errorf("prune obsolete models: %w", err)
+		return fmt.Errorf("delete obsolete unreferenced models: %w", err)
 	}
 
 	return nil
