@@ -249,7 +249,8 @@ func (r *TaskRepository) GetNextQueued(supportedModels []string) (*models.Prompt
 		UPDATE prompt_tasks
 		SET status = $2
 		WHERE id = $1
-	`, task.ID, models.StatusProcessing); err != nil {
+		  AND status = $3
+	`, task.ID, models.StatusProcessing, models.StatusQueued); err != nil {
 		_ = tx.Rollback()
 		return nil, fmt.Errorf("mark task %s as processing: %w", task.ID, err)
 	}
@@ -268,12 +269,13 @@ func (r *TaskRepository) updateTaskResult(id string, status models.TaskStatus, r
 		SET status = $2,
 		    result = NULLIF($3, '')
 		WHERE id = $1
-	`, id, status, resultText)
+		  AND status = $4
+	`, id, status, resultText, models.StatusProcessing)
 	if err != nil {
 		return fmt.Errorf("update task %s state: %w", id, err)
 	}
 
-	if err := ensureRowsAffected(result, fmt.Sprintf("task not found: %s", id)); err != nil {
+	if err := ensureRowsAffected(result, fmt.Sprintf("task not found or not processing: %s", id)); err != nil {
 		return err
 	}
 

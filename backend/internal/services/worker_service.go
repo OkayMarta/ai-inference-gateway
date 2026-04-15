@@ -59,21 +59,31 @@ func (s *WorkerService) processNext() {
 		}
 
 		log.Printf("[WorkerService] Worker %s -> task %s (model %s)", w.ID, task.ID, task.ModelID)
-		_ = s.workerRepo.UpdateStatus(w.ID, models.WorkerBusy)
+		if err := s.workerRepo.UpdateStatus(w.ID, models.WorkerBusy); err != nil {
+			log.Printf("[WorkerService] Failed to mark worker %s as busy: %v", w.ID, err)
+			continue
+		}
 
 		go func(workerID, taskID, payload, modelID string) {
 			defer func() {
-				_ = s.workerRepo.UpdateStatus(workerID, models.WorkerIdle)
+				if err := s.workerRepo.UpdateStatus(workerID, models.WorkerIdle); err != nil {
+					log.Printf("[WorkerService] Failed to mark worker %s as idle: %v", workerID, err)
+				}
 			}()
 
 			result, err := s.executeTask(modelID, payload)
 			if err != nil {
-				_ = s.taskRepo.Fail(taskID, err.Error())
+				if failErr := s.taskRepo.Fail(taskID, err.Error()); failErr != nil {
+					log.Printf("[WorkerService] Worker %s failed task %s and could not persist failure: %v", workerID, taskID, failErr)
+				}
 				log.Printf("[WorkerService] Worker %s failed task %s: %v", workerID, taskID, err)
 				return
 			}
 
-			_ = s.taskRepo.Complete(taskID, result)
+			if completeErr := s.taskRepo.Complete(taskID, result); completeErr != nil {
+				log.Printf("[WorkerService] Worker %s completed task %s but could not persist completion: %v", workerID, taskID, completeErr)
+				return
+			}
 			log.Printf("[WorkerService] Worker %s completed task %s", workerID, taskID)
 		}(w.ID, task.ID, task.Payload, task.ModelID)
 	}
