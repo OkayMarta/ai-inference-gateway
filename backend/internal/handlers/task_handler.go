@@ -23,6 +23,10 @@ type submitRequest struct {
 	Payload string `json:"payload"`
 }
 
+type updateTaskRequest struct {
+	Payload *string `json:"payload"`
+}
+
 func (h *TaskHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	var req submitRequest
 
@@ -53,6 +57,37 @@ func (h *TaskHandler) Submit(w http.ResponseWriter, r *http.Request) {
 func (h *TaskHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	task, err := h.inference.GetTaskByID(id)
+	if err != nil {
+		status := mapErrorToStatus(err)
+		message := err.Error()
+		if status == http.StatusInternalServerError {
+			message = "internal server error"
+		}
+		respondError(w, r, status, message)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, task)
+}
+
+func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	var req updateTaskRequest
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(&req); err != nil {
+		respondError(w, r, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.Payload == nil {
+		respondError(w, r, http.StatusBadRequest, services.ErrInvalidTaskUpdate.Error())
+		return
+	}
+
+	task, err := h.inference.UpdateTaskPayload(id, *req.Payload)
 	if err != nil {
 		status := mapErrorToStatus(err)
 		message := err.Error()

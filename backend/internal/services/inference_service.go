@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"strings"
 
 	"ai-inference-gateway/internal/models"
 )
@@ -111,4 +112,33 @@ func (s *InferenceService) GetAllTasks() ([]*models.PromptTask, error) {
 
 func (s *InferenceService) GetTasksByUserID(userID string) ([]*models.PromptTask, error) {
 	return s.ListTasks(TaskListFilter{UserID: userID})
+}
+
+func (s *InferenceService) UpdateTaskPayload(id string, payload string) (*models.PromptTask, error) {
+	task, err := s.taskRepo.GetByID(id)
+	if err != nil {
+		if isRepoNotFoundError(err, "task not found:") {
+			return nil, ErrTaskNotFound
+		}
+		return nil, err
+	}
+
+	if task.Status != models.StatusQueued {
+		return nil, ErrTaskCannotBeUpdated
+	}
+
+	trimmedPayload := strings.TrimSpace(payload)
+	if trimmedPayload == "" {
+		return nil, ErrInvalidTaskUpdate
+	}
+
+	task.Payload = trimmedPayload
+	if err := s.taskRepo.Update(task); err != nil {
+		if isRepoNotFoundError(err, "task not found:") {
+			return nil, ErrTaskNotFound
+		}
+		return nil, err
+	}
+
+	return task, nil
 }

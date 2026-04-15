@@ -69,6 +69,7 @@ func main() {
 
 		r.Post("/tasks", taskH.Submit)
 		r.Get("/tasks/{id}", taskH.GetByID)
+		r.Put("/tasks/{id}", taskH.UpdateTask)
 		r.Get("/tasks", taskH.List)
 	})
 
