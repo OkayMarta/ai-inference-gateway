@@ -11,9 +11,9 @@
 }
 
 .status-queued {
-    border-color: rgba(245, 158, 11, 0.28);
-    background: rgba(245, 158, 11, 0.12);
-    color: #fcd34d;
+    border-color: rgba(168, 85, 247, 0.28);
+    background: rgba(168, 85, 247, 0.12);
+    color: #d8b4fe;
 }
 
 .status-processing {
@@ -32,4 +32,10 @@
     border-color: rgba(248, 113, 113, 0.28);
     background: rgba(248, 113, 113, 0.12);
     color: #fca5a5;
+}
+
+.status-cancelled {
+    border-color: rgba(249, 115, 22, 0.28);
+    background: rgba(249, 115, 22, 0.12);
+    color: #fdba74;
 }

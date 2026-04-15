@@ -32,7 +32,7 @@ func InitDB() (*sql.DB, error) {
 	}
 
 	connStr := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s TimeZone=UTC",
 		host,
 		port,
 		user,

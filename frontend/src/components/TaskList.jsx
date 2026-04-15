@@ -49,11 +49,17 @@ const TaskList = ({
 
     const taskSummary = (
         <div className="task-summary">
-            <span className="task-summary-item">Queued {queuedCount}</span>
-            <span className="task-summary-item">Processing {processingCount}</span>
-            <span className="task-summary-item">Completed {completedCount}</span>
-            <span className="task-summary-item">Failed {failedCount}</span>
-            <span className="task-summary-item">Cancelled {cancelledCount}</span>
+            <span className="task-summary-item task-summary-queued">Queued {queuedCount}</span>
+            <span className="task-summary-item task-summary-processing">
+                Processing {processingCount}
+            </span>
+            <span className="task-summary-item task-summary-completed">
+                Completed {completedCount}
+            </span>
+            <span className="task-summary-item task-summary-failed">Failed {failedCount}</span>
+            <span className="task-summary-item task-summary-cancelled">
+                Cancelled {cancelledCount}
+            </span>
         </div>
     );
     const filterControls = (

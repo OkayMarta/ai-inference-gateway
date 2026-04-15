@@ -27,7 +27,7 @@ func respondError(w http.ResponseWriter, r *http.Request, status int, message st
 	w.WriteHeader(status)
 
 	response := ErrorResponse{
-		Timestamp: time.Now().Format(time.RFC3339),
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
 		Status:    status,
 		Message:   message,
 		Path:      r.URL.Path,

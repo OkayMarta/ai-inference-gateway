@@ -135,8 +135,11 @@ func (r *TaskRepository) create(exec appdb.DBTX, task *models.PromptTask) error 
 		`, task.ID, task.UserID, task.ModelID, task.Payload, task.Status, task.Result).Scan(&task.CreatedAt); err != nil {
 			return fmt.Errorf("create task %s: %w", task.ID, err)
 		}
+		task.CreatedAt = task.CreatedAt.UTC()
 		return nil
 	}
+
+	task.CreatedAt = task.CreatedAt.UTC()
 
 	_, err := exec.Exec(`
 		INSERT INTO prompt_tasks (id, user_id, model_id, payload, status, result, created_at)
@@ -301,7 +304,7 @@ func scanPromptTask(scanner interface {
 		return nil, fmt.Errorf("scan task: %w", err)
 	}
 
-	task.CreatedAt = createdAt
+	task.CreatedAt = createdAt.UTC()
 	if result.Valid {
 		task.Result = result.String
 	}

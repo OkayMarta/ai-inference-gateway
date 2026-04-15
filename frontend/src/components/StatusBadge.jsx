@@ -8,6 +8,8 @@ const getStatusClass = (status) => {
             return "status-badge status-processing";
         case "Failed":
             return "status-badge status-failed";
+        case "Cancelled":
+            return "status-badge status-cancelled";
         default:
             return "status-badge status-queued";
     }

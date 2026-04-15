@@ -25,7 +25,7 @@ CREATE TABLE prompt_tasks (
     payload TEXT NOT NULL,
     status VARCHAR NOT NULL,
     result TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_prompt_tasks_status
         CHECK (status IN ('Queued', 'Processing', 'Completed', 'Failed', 'Cancelled'))
 );
@@ -37,7 +37,7 @@ CREATE TABLE transactions (
     task_id VARCHAR REFERENCES prompt_tasks(id) ON DELETE SET NULL,
     amount NUMERIC(12,2) NOT NULL CHECK (amount >= 0),
     type VARCHAR NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_transactions_type
         CHECK (type IN ('charge', 'refund'))
 );
@@ -46,7 +46,7 @@ CREATE TABLE transactions (
 CREATE TABLE worker_nodes (
     id VARCHAR PRIMARY KEY,
     status VARCHAR NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_worker_nodes_status
         CHECK (status IN ('Idle', 'Busy'))
 );
