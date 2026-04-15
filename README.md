@@ -1,4 +1,4 @@
-# AI Inference Gateway (Lab 2)
+# AI Inference Gateway (LR 2)
 
 ## Опис
 
