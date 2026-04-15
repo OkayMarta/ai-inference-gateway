@@ -3,16 +3,9 @@ package services
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
 	"fmt"
 
 	"ai-inference-gateway/internal/models"
-)
-
-var (
-	ErrUserNotFound        = errors.New("user not found")
-	ErrModelNotFound       = errors.New("model not found")
-	ErrInsufficientBalance = errors.New("insufficient token balance")
 )
 
 // InferenceService coordinates billing and task orchestration.
@@ -46,17 +39,22 @@ func generateID() string {
 func (s *InferenceService) SubmitPrompt(userID, modelID, payload string) (*models.PromptTask, error) {
 	user, err := s.userRepo.GetByID(userID)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrUserNotFound, userID)
+		if isRepoNotFoundError(err, "user not found:") {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
 	}
 
 	model, err := s.modelRepo.GetByID(modelID)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrModelNotFound, modelID)
+		if isRepoNotFoundError(err, "model not found:") {
+			return nil, ErrModelNotFound
+		}
+		return nil, err
 	}
 
 	if user.TokenBalance < model.TokenCost {
-		return nil, fmt.Errorf("%w: have %.2f, need %.2f", ErrInsufficientBalance,
-			user.TokenBalance, model.TokenCost)
+		return nil, ErrInsufficientBalance
 	}
 
 	if err := s.userRepo.UpdateBalance(userID, user.TokenBalance-model.TokenCost); err != nil {
@@ -88,10 +86,22 @@ func (s *InferenceService) SubmitPrompt(userID, modelID, payload string) (*model
 }
 
 func (s *InferenceService) GetTaskByID(id string) (*models.PromptTask, error) {
-	return s.taskRepo.GetByID(id)
+	task, err := s.taskRepo.GetByID(id)
+	if err != nil {
+		if isRepoNotFoundError(err, "task not found:") {
+			return nil, ErrTaskNotFound
+		}
+		return nil, err
+	}
+
+	return task, nil
 }
 
 func (s *InferenceService) ListTasks(filter TaskListFilter) ([]*models.PromptTask, error) {
+	if filter.Limit < 0 || filter.Offset < 0 {
+		return nil, ErrInvalidPagination
+	}
+
 	return s.taskRepo.List(filter)
 }
 

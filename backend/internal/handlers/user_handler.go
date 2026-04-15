@@ -20,7 +20,7 @@ func NewUserHandler(s *services.UserService) *UserHandler {
 func (h *UserHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	users, err := h.service.GetAll()
 	if err != nil {
-		respondError(w, r, http.StatusInternalServerError, "Internal server error")
+		respondError(w, r, mapErrorToStatus(err), "internal server error")
 		return
 	}
 
@@ -32,7 +32,12 @@ func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	user, err := h.service.GetByID(id)
 	if err != nil {
-		respondError(w, r, http.StatusNotFound, err.Error())
+		status := mapErrorToStatus(err)
+		message := err.Error()
+		if status == http.StatusInternalServerError {
+			message = "internal server error"
+		}
+		respondError(w, r, status, message)
 		return
 	}
 

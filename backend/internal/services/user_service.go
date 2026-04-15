@@ -12,7 +12,15 @@ func NewUserService(repo UserRepository) *UserService {
 }
 
 func (s *UserService) GetByID(id string) (*models.User, error) {
-	return s.repo.GetByID(id)
+	user, err := s.repo.GetByID(id)
+	if err != nil {
+		if isRepoNotFoundError(err, "user not found:") {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+
+	return user, nil
 }
 
 func (s *UserService) GetAll() ([]*models.User, error) {

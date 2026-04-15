@@ -2,8 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
+
+	"ai-inference-gateway/internal/services"
 )
 
 type ErrorResponse struct {
@@ -31,6 +34,29 @@ func respondError(w http.ResponseWriter, r *http.Request, status int, message st
 	}
 
 	_ = json.NewEncoder(w).Encode(response)
+}
+
+func mapErrorToStatus(err error) int {
+	switch {
+	case errors.Is(err, services.ErrUserNotFound):
+		return http.StatusNotFound
+	case errors.Is(err, services.ErrTaskNotFound):
+		return http.StatusNotFound
+	case errors.Is(err, services.ErrModelNotFound):
+		return http.StatusNotFound
+	case errors.Is(err, services.ErrInsufficientBalance):
+		return http.StatusUnprocessableEntity
+	case errors.Is(err, services.ErrTaskCannotBeUpdated):
+		return http.StatusConflict
+	case errors.Is(err, services.ErrTaskCannotBeDeleted):
+		return http.StatusConflict
+	case errors.Is(err, services.ErrInvalidPagination):
+		return http.StatusBadRequest
+	case errors.Is(err, services.ErrUserUpdateNotAllowed):
+		return http.StatusForbidden
+	default:
+		return http.StatusInternalServerError
+	}
 }
 
 func RecoveryMiddleware(next http.Handler) http.Handler {

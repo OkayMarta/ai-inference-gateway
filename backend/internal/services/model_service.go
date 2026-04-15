@@ -16,5 +16,13 @@ func (s *ModelService) GetAll() ([]*models.AIModel, error) {
 }
 
 func (s *ModelService) GetByID(id string) (*models.AIModel, error) {
-	return s.repo.GetByID(id)
+	model, err := s.repo.GetByID(id)
+	if err != nil {
+		if isRepoNotFoundError(err, "model not found:") {
+			return nil, ErrModelNotFound
+		}
+		return nil, err
+	}
+
+	return model, nil
 }

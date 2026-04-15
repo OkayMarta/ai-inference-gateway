@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -39,14 +38,12 @@ func (h *TaskHandler) Submit(w http.ResponseWriter, r *http.Request) {
 
 	task, err := h.inference.SubmitPrompt(req.UserID, req.ModelID, req.Payload)
 	if err != nil {
-		switch {
-		case errors.Is(err, services.ErrUserNotFound), errors.Is(err, services.ErrModelNotFound):
-			respondError(w, r, http.StatusNotFound, err.Error())
-		case errors.Is(err, services.ErrInsufficientBalance):
-			respondError(w, r, http.StatusUnprocessableEntity, err.Error())
-		default:
-			respondError(w, r, http.StatusInternalServerError, "Internal server error")
+		status := mapErrorToStatus(err)
+		message := err.Error()
+		if status == http.StatusInternalServerError {
+			message = "internal server error"
 		}
+		respondError(w, r, status, message)
 		return
 	}
 
@@ -57,7 +54,12 @@ func (h *TaskHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	task, err := h.inference.GetTaskByID(id)
 	if err != nil {
-		respondError(w, r, http.StatusNotFound, err.Error())
+		status := mapErrorToStatus(err)
+		message := err.Error()
+		if status == http.StatusInternalServerError {
+			message = "internal server error"
+		}
+		respondError(w, r, status, message)
 		return
 	}
 
@@ -69,7 +71,12 @@ func (h *TaskHandler) List(w http.ResponseWriter, r *http.Request) {
 	if userID == "" {
 		tasks, err := h.inference.GetAllTasks()
 		if err != nil {
-			respondError(w, r, http.StatusInternalServerError, "Internal server error")
+			status := mapErrorToStatus(err)
+			message := err.Error()
+			if status == http.StatusInternalServerError {
+				message = "internal server error"
+			}
+			respondError(w, r, status, message)
 			return
 		}
 
@@ -79,7 +86,12 @@ func (h *TaskHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	tasks, err := h.inference.GetTasksByUserID(userID)
 	if err != nil {
-		respondError(w, r, http.StatusInternalServerError, "Internal server error")
+		status := mapErrorToStatus(err)
+		message := err.Error()
+		if status == http.StatusInternalServerError {
+			message = "internal server error"
+		}
+		respondError(w, r, status, message)
 		return
 	}
 
