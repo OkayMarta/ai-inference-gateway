@@ -4,10 +4,21 @@ import "time"
 
 // User представляє користувача платформи з балансом токенів.
 type User struct {
-	ID           string  `json:"id"`
-	Username     string  `json:"username"`
-	TokenBalance float64 `json:"tokenBalance"`
+	ID           string    `json:"id"`
+	Username     string    `json:"username"`
+	Email        string    `json:"email"`
+	PasswordHash string    `json:"-"`
+	Role         UserRole  `json:"role"`
+	TokenBalance float64   `json:"tokenBalance"`
+	CreatedAt    time.Time `json:"createdAt"`
 }
+
+type UserRole string
+
+const (
+	RoleUser  UserRole = "user"
+	RoleAdmin UserRole = "admin"
+)
 
 // AIModel представляє ШІ-модель, доступну для обробки запитів.
 type AIModel struct {
