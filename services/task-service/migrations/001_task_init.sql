@@ -1,0 +1,2 @@
+-- Lab 4 placeholder migration.
+-- Future owner: ai_models, prompt_tasks, worker_nodes, and worker_supported_models.

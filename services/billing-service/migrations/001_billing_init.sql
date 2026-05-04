@@ -1,0 +1,2 @@
+-- Lab 4 placeholder migration.
+-- Future owner: users, balances, auth fields, and transactions.
