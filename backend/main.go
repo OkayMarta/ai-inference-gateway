@@ -92,19 +92,23 @@ func main() {
 	r.Route("/api", func(r chi.Router) {
 		r.Post("/auth/register", authH.Register)
 		r.Post("/auth/login", authH.Login)
-		r.With(handlers.AuthMiddleware(authSvc)).Get("/auth/me", authH.Me)
-
-		r.Get("/users", userH.GetAll)
-		r.Get("/users/{id}", userH.GetByID)
-		r.Put("/users/{id}", userH.Update)
-
 		r.Get("/models", modelH.GetAll)
 
-		r.Post("/tasks", taskH.Submit)
-		r.Get("/tasks/{id}", taskH.GetByID)
-		r.Put("/tasks/{id}", taskH.UpdateTask)
-		r.Delete("/tasks/{id}", taskH.DeleteTask)
-		r.Get("/tasks", taskH.List)
+		r.Group(func(r chi.Router) {
+			r.Use(handlers.AuthMiddleware(authSvc))
+
+			r.Get("/auth/me", authH.Me)
+
+			r.Get("/users", userH.GetAll)
+			r.Get("/users/{id}", userH.GetByID)
+			r.Put("/users/{id}", userH.Update)
+
+			r.Post("/tasks", taskH.Submit)
+			r.Get("/tasks", taskH.List)
+			r.Get("/tasks/{id}", taskH.GetByID)
+			r.Put("/tasks/{id}", taskH.UpdateTask)
+			r.Delete("/tasks/{id}", taskH.DeleteTask)
+		})
 	})
 
 	log.Println("AI Inference Gateway startup complete")
