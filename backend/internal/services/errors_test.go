@@ -17,6 +17,9 @@ func TestExportedErrorsAreSet(t *testing.T) {
 		{name: "ErrUserUpdateNotAllowed", err: ErrUserUpdateNotAllowed},
 		{name: "ErrInvalidUserUpdate", err: ErrInvalidUserUpdate},
 		{name: "ErrInvalidTaskUpdate", err: ErrInvalidTaskUpdate},
+		{name: "ErrInvalidCredentials", err: ErrInvalidCredentials},
+		{name: "ErrInvalidAuthInput", err: ErrInvalidAuthInput},
+		{name: "ErrInvalidToken", err: ErrInvalidToken},
 	}
 
 	for _, tt := range tests {

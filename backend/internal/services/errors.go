@@ -6,16 +6,19 @@ import (
 )
 
 var (
-	ErrUserNotFound        = errors.New("user not found")
-	ErrModelNotFound       = errors.New("model not found")
-	ErrTaskNotFound        = errors.New("task not found")
-	ErrInsufficientBalance = errors.New("insufficient token balance")
-	ErrTaskCannotBeUpdated = errors.New("task cannot be updated")
-	ErrTaskCannotBeDeleted = errors.New("task cannot be deleted")
-	ErrInvalidPagination   = errors.New("invalid pagination")
+	ErrUserNotFound         = errors.New("user not found")
+	ErrModelNotFound        = errors.New("model not found")
+	ErrTaskNotFound         = errors.New("task not found")
+	ErrInsufficientBalance  = errors.New("insufficient token balance")
+	ErrTaskCannotBeUpdated  = errors.New("task cannot be updated")
+	ErrTaskCannotBeDeleted  = errors.New("task cannot be deleted")
+	ErrInvalidPagination    = errors.New("invalid pagination")
 	ErrUserUpdateNotAllowed = errors.New("user update not allowed")
 	ErrInvalidUserUpdate    = errors.New("invalid user update")
 	ErrInvalidTaskUpdate    = errors.New("invalid task update")
+	ErrInvalidCredentials   = errors.New("invalid credentials")
+	ErrInvalidAuthInput     = errors.New("invalid auth input")
+	ErrInvalidToken         = errors.New("invalid token")
 )
 
 // Репозиторії поки повертають текстові not found помилки, тому тимчасово
