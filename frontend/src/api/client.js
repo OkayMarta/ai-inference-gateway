@@ -1,5 +1,6 @@
 const API_BASE = "/api";
 const DEFAULT_ERROR_MESSAGE = "Server request failed";
+const TOKEN_STORAGE_KEY = "authToken";
 
 const parseResponse = async (response) => {
     const contentType = response.headers.get("content-type") || "";
@@ -25,20 +26,29 @@ const getErrorMessage = (responseBody) => {
     return DEFAULT_ERROR_MESSAGE;
 };
 
-const normalizeSubmitTaskPayload = (userIdOrParams, modelId, payload) => {
-    if (userIdOrParams && typeof userIdOrParams === "object") {
-        return userIdOrParams;
-    }
+const getToken = () => localStorage.getItem(TOKEN_STORAGE_KEY);
 
-    return { userId: userIdOrParams, modelId, payload };
+const setToken = (token) => {
+    if (token) {
+        localStorage.setItem(TOKEN_STORAGE_KEY, token);
+    } else {
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
+    }
 };
 
 const request = async (url, options = {}) => {
+    const token = getToken();
+    const headers = {
+        "Content-Type": "application/json",
+        ...options.headers,
+    };
+
+    if (token) {
+        headers.Authorization = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${API_BASE}${url}`, {
-        headers: {
-            "Content-Type": "application/json",
-            ...options.headers,
-        },
+        headers,
         ...options,
     });
 
@@ -52,6 +62,26 @@ const request = async (url, options = {}) => {
 };
 
 export const api = {
+    getToken,
+    setToken,
+    logout: () => setToken(""),
+    login: async (email, password) => {
+        const data = await request("/auth/login", {
+            method: "POST",
+            body: JSON.stringify({ email, password }),
+        });
+        setToken(data.token);
+        return data;
+    },
+    register: async (username, email, password) => {
+        const data = await request("/auth/register", {
+            method: "POST",
+            body: JSON.stringify({ username, email, password }),
+        });
+        setToken(data.token);
+        return data;
+    },
+    getMe: () => request("/auth/me"),
     getUsers: () => request("/users"),
     getModels: () => request("/models"),
     getTasks: (params = {}) => {
@@ -76,16 +106,10 @@ export const api = {
         const suffix = query.toString() ? `?${query.toString()}` : "";
         return request(`/tasks${suffix}`);
     },
-    submitTask: (userIdOrParams, modelId, payload) => {
-        const task = normalizeSubmitTaskPayload(
-            userIdOrParams,
-            modelId,
-            payload,
-        );
-
+    submitTask: (modelId, payload) => {
         return request("/tasks", {
             method: "POST",
-            body: JSON.stringify(task),
+            body: JSON.stringify({ modelId, payload }),
         });
     },
     deleteTask: (taskId) =>

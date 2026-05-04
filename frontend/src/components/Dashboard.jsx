@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
+import AuthForm from "./AuthForm";
 import EmptyState from "./EmptyState";
 import SectionCard from "./SectionCard";
 import TaskComposer from "./TaskComposer";
@@ -15,16 +16,19 @@ const countTasksByStatus = (tasks, status) => {
 };
 
 const Dashboard = () => {
-    const [users, setUsers] = useState([]);
+    const [landingStarted, setLandingStarted] = useState(false);
+    const [authUser, setAuthUser] = useState(null);
+    const [currentUser, setCurrentUser] = useState(null);
     const [models, setModels] = useState([]);
     const [tasks, setTasks] = useState([]);
 
-    const [selectedUserId, setSelectedUserId] = useState("");
     const [selectedModelId, setSelectedModelId] = useState("");
     const [prompt, setPrompt] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
 
-    const [bootLoading, setBootLoading] = useState(true);
+    const [authLoading, setAuthLoading] = useState(Boolean(api.getToken()));
+    const [authError, setAuthError] = useState("");
+    const [bootLoading, setBootLoading] = useState(false);
     const [taskLoading, setTaskLoading] = useState(false);
     const [submitLoading, setSubmitLoading] = useState(false);
     const [cancelLoadingTaskId, setCancelLoadingTaskId] = useState("");
@@ -33,11 +37,6 @@ const Dashboard = () => {
     const [submitSuccess, setSubmitSuccess] = useState("");
     const [balanceAlert, setBalanceAlert] = useState("");
     const [metricFlashToken, setMetricFlashToken] = useState(0);
-
-    const currentUser = useMemo(
-        () => users.find((user) => user.id === selectedUserId) || null,
-        [users, selectedUserId],
-    );
 
     const currentModel = useMemo(
         () => models.find((model) => model.id === selectedModelId) || null,
@@ -58,12 +57,10 @@ const Dashboard = () => {
         () => countTasksByStatus(sortedTasks, "Queued"),
         [sortedTasks],
     );
-
     const processingCount = useMemo(
         () => countTasksByStatus(sortedTasks, "Processing"),
         [sortedTasks],
     );
-
     const completedCount = useMemo(
         () => countTasksByStatus(sortedTasks, "Completed"),
         [sortedTasks],
@@ -77,11 +74,61 @@ const Dashboard = () => {
         [sortedTasks],
     );
 
-    const hasBootData = users.length > 0 || models.length > 0;
-    const composerScreenError = !hasBootData ? screenError : "";
-    const taskScreenError = selectedUserId ? screenError : "";
+    const hydrateCurrentUser = async (me) => {
+        const userID = me.id || me.userId || me.ID;
+        const users = normalizeList(await api.getUsers());
+        return users.find((user) => user.id === userID) || {
+            id: userID,
+            email: me.email || me.Email,
+            role: me.role,
+        };
+    };
 
     useEffect(() => {
+        let active = true;
+
+        const restoreSession = async () => {
+            if (!api.getToken()) {
+                setAuthLoading(false);
+                return;
+            }
+
+            try {
+                const me = await api.getMe();
+                const user = await hydrateCurrentUser(me);
+
+                if (!active) {
+                    return;
+                }
+
+                setAuthUser(me);
+                setCurrentUser(user);
+                setLandingStarted(true);
+            } catch (error) {
+                api.logout();
+                if (active) {
+                    setAuthError("Session expired. Please login again.");
+                    setLandingStarted(true);
+                }
+            } finally {
+                if (active) {
+                    setAuthLoading(false);
+                }
+            }
+        };
+
+        restoreSession();
+
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!currentUser) {
+            return undefined;
+        }
+
         let active = true;
 
         const loadBootData = async () => {
@@ -89,16 +136,10 @@ const Dashboard = () => {
             setScreenError("");
 
             try {
-                const [nextUsers, nextModels] = await Promise.all([
-                    api.getUsers(),
-                    api.getModels(),
-                ]);
-
+                const nextModels = await api.getModels();
                 if (!active) {
                     return;
                 }
-
-                setUsers(normalizeList(nextUsers));
                 setModels(normalizeList(nextModels));
             } catch (error) {
                 if (active) {
@@ -116,13 +157,13 @@ const Dashboard = () => {
         return () => {
             active = false;
         };
-    }, []);
+    }, [currentUser]);
 
     useEffect(() => {
-        if (!selectedUserId) {
+        if (!currentUser) {
             setTasks([]);
             setTaskLoading(false);
-            return;
+            return undefined;
         }
 
         let active = true;
@@ -136,7 +177,7 @@ const Dashboard = () => {
             try {
                 const [nextTasks, nextUsers] = await Promise.all([
                     api.getTasks({
-                        userId: selectedUserId,
+                        userId: currentUser.id,
                         status: statusFilter,
                         limit: 20,
                         offset: 0,
@@ -150,7 +191,12 @@ const Dashboard = () => {
                 }
 
                 setTasks(normalizeList(nextTasks));
-                setUsers(normalizeList(nextUsers));
+                const refreshedUser = normalizeList(nextUsers).find(
+                    (user) => user.id === currentUser.id,
+                );
+                if (refreshedUser) {
+                    setCurrentUser(refreshedUser);
+                }
             } catch (error) {
                 if (active) {
                     setScreenError(error.message);
@@ -171,7 +217,7 @@ const Dashboard = () => {
             active = false;
             clearInterval(intervalId);
         };
-    }, [selectedUserId, statusFilter]);
+    }, [currentUser?.id, statusFilter]);
 
     useEffect(() => {
         if (!submitError) {
@@ -209,12 +255,45 @@ const Dashboard = () => {
         return () => window.clearTimeout(timeoutId);
     }, [balanceAlert]);
 
-    const handleUserChange = (event) => {
-        setSelectedUserId(event.target.value);
-        setSubmitError("");
-        setSubmitSuccess("");
-        setBalanceAlert("");
+    const completeAuth = async (authAction) => {
+        setAuthLoading(true);
+        setAuthError("");
+
+        try {
+            await authAction();
+            const me = await api.getMe();
+            const user = await hydrateCurrentUser(me);
+            setAuthUser(me);
+            setCurrentUser(user);
+            setLandingStarted(true);
+        } catch (error) {
+            api.logout();
+            setAuthError(error.message);
+        } finally {
+            setAuthLoading(false);
+        }
+    };
+
+    const handleLogin = ({ email, password }) => {
+        completeAuth(() => api.login(email, password));
+    };
+
+    const handleRegister = ({ username, email, password }) => {
+        completeAuth(() => api.register(username, email, password));
+    };
+
+    const handleLogout = () => {
+        api.logout();
+        setAuthUser(null);
+        setCurrentUser(null);
+        setModels([]);
+        setTasks([]);
+        setSelectedModelId("");
+        setPrompt("");
+        setStatusFilter("");
         setScreenError("");
+        setAuthError("");
+        setLandingStarted(false);
     };
 
     const handleModelChange = (event) => {
@@ -237,7 +316,7 @@ const Dashboard = () => {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
-        if (!selectedUserId || !selectedModelId || !prompt.trim()) {
+        if (!selectedModelId || !prompt.trim()) {
             return;
         }
 
@@ -247,11 +326,11 @@ const Dashboard = () => {
         setBalanceAlert("");
 
         try {
-            await api.submitTask(selectedUserId, selectedModelId, prompt.trim());
+            await api.submitTask(selectedModelId, prompt.trim());
 
             const [nextTasks, nextUsers] = await Promise.all([
                 api.getTasks({
-                    userId: selectedUserId,
+                    userId: currentUser.id,
                     status: statusFilter,
                     limit: 20,
                     offset: 0,
@@ -261,7 +340,12 @@ const Dashboard = () => {
             ]);
 
             setTasks(normalizeList(nextTasks));
-            setUsers(normalizeList(nextUsers));
+            const refreshedUser = normalizeList(nextUsers).find(
+                (user) => user.id === currentUser.id,
+            );
+            if (refreshedUser) {
+                setCurrentUser(refreshedUser);
+            }
             setPrompt("");
             setSubmitSuccess("Task submitted.");
         } catch (error) {
@@ -283,7 +367,7 @@ const Dashboard = () => {
 
             const [nextTasks, nextUsers] = await Promise.all([
                 api.getTasks({
-                    userId: selectedUserId,
+                    userId: currentUser.id,
                     status: statusFilter,
                     limit: 20,
                     offset: 0,
@@ -293,7 +377,12 @@ const Dashboard = () => {
             ]);
 
             setTasks(normalizeList(nextTasks));
-            setUsers(normalizeList(nextUsers));
+            const refreshedUser = normalizeList(nextUsers).find(
+                (user) => user.id === currentUser.id,
+            );
+            if (refreshedUser) {
+                setCurrentUser(refreshedUser);
+            }
         } catch (error) {
             console.error(error);
             window.alert(`Error: ${error.message}`);
@@ -301,6 +390,51 @@ const Dashboard = () => {
             setCancelLoadingTaskId("");
         }
     };
+
+    if (authLoading) {
+        return (
+            <div className="auth-shell">
+                <SectionCard className="auth-card">
+                    <EmptyState
+                        title="Checking session"
+                        description="Authentication state is being restored."
+                    />
+                </SectionCard>
+            </div>
+        );
+    }
+
+    if (!landingStarted && !api.getToken()) {
+        return (
+            <section className="landing-screen">
+                <div className="landing-content">
+                    <h2>AI Inference Gateway</h2>
+                    <p>
+                        Submit prompts, track queued inference work, and monitor token
+                        usage through a PostgreSQL-backed gateway.
+                    </p>
+                    <button
+                        type="button"
+                        className="submit-button landing-button"
+                        onClick={() => setLandingStarted(true)}
+                    >
+                        Start
+                    </button>
+                </div>
+            </section>
+        );
+    }
+
+    if (!currentUser) {
+        return (
+            <AuthForm
+                onLogin={handleLogin}
+                onRegister={handleRegister}
+                loading={authLoading}
+                error={authError}
+            />
+        );
+    }
 
     if (bootLoading) {
         return (
@@ -322,47 +456,57 @@ const Dashboard = () => {
     }
 
     return (
-        <div className="dashboard-layout">
-            <TaskComposer
-                users={users}
-                models={models}
-                hasAvailableModels={hasAvailableModels}
-                selectedUserId={selectedUserId}
-                selectedModelId={selectedModelId}
-                prompt={prompt}
-                currentUser={currentUser}
-                currentModel={currentModel}
-                screenError={composerScreenError}
-                submitError={submitError}
-                submitSuccess={submitSuccess}
-                balanceAlert={balanceAlert}
-                metricFlashToken={metricFlashToken}
-                submitLoading={submitLoading}
-                onDismissSubmitError={() => setSubmitError("")}
-                onDismissSubmitSuccess={() => setSubmitSuccess("")}
-                onDismissBalanceAlert={() => setBalanceAlert("")}
-                onUserChange={handleUserChange}
-                onModelChange={handleModelChange}
-                onPromptChange={handlePromptChange}
-                onSubmit={handleSubmit}
-            />
+        <div className="dashboard-stack">
+            <section className="session-bar">
+                <div>
+                    <span className="session-label">Signed in</span>
+                    <strong>{currentUser.username || authUser?.email || currentUser.email}</strong>
+                    <span>{currentUser.email || authUser?.email}</span>
+                </div>
+                <button type="button" className="logout-button" onClick={handleLogout}>
+                    Logout
+                </button>
+            </section>
 
-            <TaskList
-                models={models}
-                selectedUserId={selectedUserId}
-                screenError={taskScreenError}
-                taskLoading={taskLoading}
-                sortedTasks={sortedTasks}
-                queuedCount={queuedCount}
-                processingCount={processingCount}
-                completedCount={completedCount}
-                failedCount={failedCount}
-                cancelledCount={cancelledCount}
-                statusFilter={statusFilter}
-                onStatusFilterChange={handleStatusFilterChange}
-                onCancelTask={handleCancelTask}
-                cancelLoadingTaskId={cancelLoadingTaskId}
-            />
+            <div className="dashboard-layout">
+                <TaskComposer
+                    models={models}
+                    hasAvailableModels={hasAvailableModels}
+                    selectedModelId={selectedModelId}
+                    prompt={prompt}
+                    currentUser={currentUser}
+                    currentModel={currentModel}
+                    screenError={screenError}
+                    submitError={submitError}
+                    submitSuccess={submitSuccess}
+                    balanceAlert={balanceAlert}
+                    metricFlashToken={metricFlashToken}
+                    submitLoading={submitLoading}
+                    onDismissSubmitError={() => setSubmitError("")}
+                    onDismissSubmitSuccess={() => setSubmitSuccess("")}
+                    onDismissBalanceAlert={() => setBalanceAlert("")}
+                    onModelChange={handleModelChange}
+                    onPromptChange={handlePromptChange}
+                    onSubmit={handleSubmit}
+                />
+
+                <TaskList
+                    models={models}
+                    selectedUserId={currentUser.id}
+                    screenError={screenError}
+                    taskLoading={taskLoading}
+                    sortedTasks={sortedTasks}
+                    queuedCount={queuedCount}
+                    processingCount={processingCount}
+                    completedCount={completedCount}
+                    failedCount={failedCount}
+                    cancelledCount={cancelledCount}
+                    statusFilter={statusFilter}
+                    onStatusFilterChange={handleStatusFilterChange}
+                    onCancelTask={handleCancelTask}
+                    cancelLoadingTaskId={cancelLoadingTaskId}
+                />
+            </div>
         </div>
     );
 };

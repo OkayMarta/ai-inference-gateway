@@ -10,9 +10,9 @@ import (
 type authUserContextKey struct{}
 
 type AuthUser struct {
-	ID    string
-	Email string
-	Role  string
+	ID    string `json:"id"`
+	Email string `json:"email"`
+	Role  string `json:"role"`
 }
 
 func AuthMiddleware(auth *services.AuthService) func(http.Handler) http.Handler {

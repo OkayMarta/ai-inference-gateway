@@ -1,10 +1,8 @@
 import SectionCard from "./SectionCard";
 
 const TaskComposer = ({
-    users,
     models,
     hasAvailableModels,
-    selectedUserId,
     selectedModelId,
     prompt,
     currentUser,
@@ -18,7 +16,6 @@ const TaskComposer = ({
     onDismissSubmitError,
     onDismissSubmitSuccess,
     onDismissBalanceAlert,
-    onUserChange,
     onModelChange,
     onPromptChange,
     onSubmit,
@@ -75,25 +72,6 @@ const TaskComposer = ({
                         )}
                     </div>
                 )}
-
-                <section className="control-section">
-                    <label className="field-label" htmlFor="user-select">
-                        User
-                    </label>
-                    <select
-                        id="user-select"
-                        value={selectedUserId}
-                        onChange={onUserChange}
-                        className="field-input"
-                    >
-                        <option value="">Select user</option>
-                        {users.map((user) => (
-                            <option key={user.id} value={user.id}>
-                                {user.username}
-                            </option>
-                        ))}
-                    </select>
-                </section>
 
                 <section className="control-section">
                     <label className="field-label" htmlFor="model-select">
@@ -156,7 +134,6 @@ const TaskComposer = ({
                         }
                         disabled={
                             !hasAvailableModels ||
-                            !selectedUserId ||
                             !selectedModelId ||
                             submitLoading
                         }
@@ -174,7 +151,6 @@ const TaskComposer = ({
                     disabled={
                         submitLoading ||
                         !hasAvailableModels ||
-                        !selectedUserId ||
                         !selectedModelId ||
                         !prompt.trim()
                     }
