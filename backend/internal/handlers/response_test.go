@@ -28,6 +28,11 @@ func TestMapErrorToStatus(t *testing.T) {
 		{name: "user update not allowed", err: services.ErrUserUpdateNotAllowed, want: http.StatusForbidden},
 		{name: "invalid user update", err: services.ErrInvalidUserUpdate, want: http.StatusBadRequest},
 		{name: "invalid task update", err: services.ErrInvalidTaskUpdate, want: http.StatusBadRequest},
+		{name: "invalid credentials", err: services.ErrInvalidCredentials, want: http.StatusUnauthorized},
+		{name: "unauthorized", err: services.ErrUnauthorized, want: http.StatusUnauthorized},
+		{name: "forbidden", err: services.ErrForbidden, want: http.StatusForbidden},
+		{name: "email already exists", err: services.ErrEmailAlreadyExists, want: http.StatusConflict},
+		{name: "invalid register input", err: services.ErrInvalidRegisterInput, want: http.StatusBadRequest},
 		{name: "unknown error", err: errors.New("unexpected failure"), want: http.StatusInternalServerError},
 	}
 

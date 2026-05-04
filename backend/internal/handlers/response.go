@@ -58,6 +58,16 @@ func mapErrorToStatus(err error) int {
 		return http.StatusBadRequest
 	case errors.Is(err, services.ErrInvalidTaskUpdate):
 		return http.StatusBadRequest
+	case errors.Is(err, services.ErrInvalidCredentials):
+		return http.StatusUnauthorized
+	case errors.Is(err, services.ErrUnauthorized):
+		return http.StatusUnauthorized
+	case errors.Is(err, services.ErrForbidden):
+		return http.StatusForbidden
+	case errors.Is(err, services.ErrEmailAlreadyExists):
+		return http.StatusConflict
+	case errors.Is(err, services.ErrInvalidRegisterInput):
+		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError
 	}

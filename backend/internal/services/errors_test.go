@@ -18,6 +18,10 @@ func TestExportedErrorsAreSet(t *testing.T) {
 		{name: "ErrInvalidUserUpdate", err: ErrInvalidUserUpdate},
 		{name: "ErrInvalidTaskUpdate", err: ErrInvalidTaskUpdate},
 		{name: "ErrInvalidCredentials", err: ErrInvalidCredentials},
+		{name: "ErrEmailAlreadyExists", err: ErrEmailAlreadyExists},
+		{name: "ErrUnauthorized", err: ErrUnauthorized},
+		{name: "ErrForbidden", err: ErrForbidden},
+		{name: "ErrInvalidRegisterInput", err: ErrInvalidRegisterInput},
 		{name: "ErrInvalidAuthInput", err: ErrInvalidAuthInput},
 		{name: "ErrInvalidToken", err: ErrInvalidToken},
 	}
