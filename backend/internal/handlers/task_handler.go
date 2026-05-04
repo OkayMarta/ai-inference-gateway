@@ -19,7 +19,6 @@ func NewTaskHandler(s *services.InferenceService) *TaskHandler {
 }
 
 type submitRequest struct {
-	UserID  string `json:"userId"`
 	ModelID string `json:"modelId"`
 	Payload string `json:"payload"`
 }
@@ -31,17 +30,26 @@ type updateTaskRequest struct {
 func (h *TaskHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	var req submitRequest
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(&req); err != nil {
 		respondError(w, r, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
-	if req.UserID == "" || req.ModelID == "" || req.Payload == "" {
-		respondError(w, r, http.StatusBadRequest, "userId, modelId, and payload are required")
+	currentUser, ok := CurrentUser(r)
+	if !ok {
+		respondError(w, r, http.StatusUnauthorized, services.ErrUnauthorized.Error())
 		return
 	}
 
-	task, err := h.inference.SubmitPrompt(req.UserID, req.ModelID, req.Payload)
+	if req.ModelID == "" || req.Payload == "" {
+		respondError(w, r, http.StatusBadRequest, "modelId and payload are required")
+		return
+	}
+
+	task, err := h.inference.SubmitPrompt(currentUser.ID, req.ModelID, req.Payload)
 	if err != nil {
 		status := mapErrorToStatus(err)
 		message := err.Error()
