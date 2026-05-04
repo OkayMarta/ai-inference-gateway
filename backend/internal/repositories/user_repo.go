@@ -19,7 +19,7 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 
 func (r *UserRepository) GetAll() ([]*models.User, error) {
 	rows, err := r.db.Query(`
-		SELECT id, username, token_balance
+		SELECT id, username, email, password_hash, token_balance, role, created_at
 		FROM users
 		ORDER BY username, id
 	`)
@@ -30,8 +30,8 @@ func (r *UserRepository) GetAll() ([]*models.User, error) {
 
 	var users []*models.User
 	for rows.Next() {
-		user := &models.User{}
-		if err := rows.Scan(&user.ID, &user.Username, &user.TokenBalance); err != nil {
+		user, err := scanUser(rows)
+		if err != nil {
 			return nil, fmt.Errorf("scan user: %w", err)
 		}
 		users = append(users, user)
@@ -56,10 +56,18 @@ func (r *UserRepository) getByID(exec appdb.DBTX, id string) (*models.User, erro
 	user := &models.User{}
 
 	err := exec.QueryRow(`
-		SELECT id, username, token_balance
+		SELECT id, username, email, password_hash, token_balance, role, created_at
 		FROM users
 		WHERE id = $1
-	`, id).Scan(&user.ID, &user.Username, &user.TokenBalance)
+	`, id).Scan(
+		&user.ID,
+		&user.Username,
+		&user.Email,
+		&user.PasswordHash,
+		&user.TokenBalance,
+		&user.Role,
+		&user.CreatedAt,
+	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("user not found: %s", id)
@@ -70,11 +78,56 @@ func (r *UserRepository) getByID(exec appdb.DBTX, id string) (*models.User, erro
 	return user, nil
 }
 
+func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
+	user := &models.User{}
+
+	err := r.db.QueryRow(`
+		SELECT id, username, email, password_hash, token_balance, role, created_at
+		FROM users
+		WHERE email = $1
+	`, email).Scan(
+		&user.ID,
+		&user.Username,
+		&user.Email,
+		&user.PasswordHash,
+		&user.TokenBalance,
+		&user.Role,
+		&user.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("user not found: %s", email)
+		}
+		return nil, fmt.Errorf("get user by email %s: %w", email, err)
+	}
+
+	return user, nil
+}
+
 func (r *UserRepository) Create(user *models.User) error {
+	if user.Role == "" {
+		user.Role = models.RoleUser
+	}
+
+	if user.CreatedAt.IsZero() {
+		err := r.db.QueryRow(`
+			INSERT INTO users (id, username, email, password_hash, token_balance, role)
+			VALUES ($1, $2, $3, $4, $5, $6)
+			RETURNING created_at
+		`, user.ID, user.Username, user.Email, user.PasswordHash, user.TokenBalance, user.Role).Scan(&user.CreatedAt)
+		if err != nil {
+			return fmt.Errorf("create user %s: %w", user.ID, err)
+		}
+		user.CreatedAt = user.CreatedAt.UTC()
+		return nil
+	}
+
+	user.CreatedAt = user.CreatedAt.UTC()
+
 	_, err := r.db.Exec(`
-		INSERT INTO users (id, username, token_balance)
-		VALUES ($1, $2, $3)
-	`, user.ID, user.Username, user.TokenBalance)
+		INSERT INTO users (id, username, email, password_hash, token_balance, role, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, user.ID, user.Username, user.Email, user.PasswordHash, user.TokenBalance, user.Role, user.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("create user %s: %w", user.ID, err)
 	}
@@ -86,9 +139,12 @@ func (r *UserRepository) Update(user *models.User) error {
 	result, err := r.db.Exec(`
 		UPDATE users
 		SET username = $2,
-		    token_balance = $3
+		    email = $3,
+		    password_hash = $4,
+		    token_balance = $5,
+		    role = $6
 		WHERE id = $1
-	`, user.ID, user.Username, user.TokenBalance)
+	`, user.ID, user.Username, user.Email, user.PasswordHash, user.TokenBalance, user.Role)
 	if err != nil {
 		return fmt.Errorf("update user %s: %w", user.ID, err)
 	}
@@ -98,6 +154,26 @@ func (r *UserRepository) Update(user *models.User) error {
 	}
 
 	return nil
+}
+
+func scanUser(scanner interface {
+	Scan(dest ...any) error
+}) (*models.User, error) {
+	user := &models.User{}
+	if err := scanner.Scan(
+		&user.ID,
+		&user.Username,
+		&user.Email,
+		&user.PasswordHash,
+		&user.TokenBalance,
+		&user.Role,
+		&user.CreatedAt,
+	); err != nil {
+		return nil, err
+	}
+
+	user.CreatedAt = user.CreatedAt.UTC()
+	return user, nil
 }
 
 func (r *UserRepository) Delete(id string) error {

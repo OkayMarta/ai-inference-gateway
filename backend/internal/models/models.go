@@ -8,16 +8,14 @@ type User struct {
 	Username     string    `json:"username"`
 	Email        string    `json:"email"`
 	PasswordHash string    `json:"-"`
-	Role         UserRole  `json:"role"`
 	TokenBalance float64   `json:"tokenBalance"`
+	Role         string    `json:"role"`
 	CreatedAt    time.Time `json:"createdAt"`
 }
 
-type UserRole string
-
 const (
-	RoleUser  UserRole = "user"
-	RoleAdmin UserRole = "admin"
+	RoleUser  = "user"
+	RoleAdmin = "admin"
 )
 
 // AIModel представляє ШІ-модель, доступну для обробки запитів.
