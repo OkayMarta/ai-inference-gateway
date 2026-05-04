@@ -15,6 +15,20 @@ const countTasksByStatus = (tasks, status) => {
     return tasks.filter((task) => task.status === status).length;
 };
 
+const sameUserSnapshot = (left, right) => {
+    if (!left || !right) {
+        return false;
+    }
+
+    return (
+        left.id === right.id &&
+        left.username === right.username &&
+        left.email === right.email &&
+        left.role === right.role &&
+        left.tokenBalance === right.tokenBalance
+    );
+};
+
 const Dashboard = () => {
     const [landingStarted, setLandingStarted] = useState(false);
     const [authUser, setAuthUser] = useState(null);
@@ -157,7 +171,7 @@ const Dashboard = () => {
         return () => {
             active = false;
         };
-    }, [currentUser]);
+    }, [currentUser?.id]);
 
     useEffect(() => {
         if (!currentUser) {
@@ -195,7 +209,11 @@ const Dashboard = () => {
                     (user) => user.id === currentUser.id,
                 );
                 if (refreshedUser) {
-                    setCurrentUser(refreshedUser);
+                    setCurrentUser((previousUser) =>
+                        sameUserSnapshot(previousUser, refreshedUser)
+                            ? previousUser
+                            : refreshedUser,
+                    );
                 }
             } catch (error) {
                 if (active) {
@@ -344,7 +362,11 @@ const Dashboard = () => {
                 (user) => user.id === currentUser.id,
             );
             if (refreshedUser) {
-                setCurrentUser(refreshedUser);
+                setCurrentUser((previousUser) =>
+                    sameUserSnapshot(previousUser, refreshedUser)
+                        ? previousUser
+                        : refreshedUser,
+                );
             }
             setPrompt("");
             setSubmitSuccess("Task submitted.");
@@ -381,7 +403,11 @@ const Dashboard = () => {
                 (user) => user.id === currentUser.id,
             );
             if (refreshedUser) {
-                setCurrentUser(refreshedUser);
+                setCurrentUser((previousUser) =>
+                    sameUserSnapshot(previousUser, refreshedUser)
+                        ? previousUser
+                        : refreshedUser,
+                );
             }
         } catch (error) {
             console.error(error);
