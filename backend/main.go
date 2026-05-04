@@ -60,6 +60,7 @@ func main() {
 	}
 
 	log.Println("initializing application services...")
+	authSvc := services.NewAuthService(userRepo)
 	userSvc := services.NewUserService(userRepo)
 	inferenceSvc := services.NewInferenceService(postgresDB, userRepo, modelRepo, taskRepo, txRepo)
 
@@ -67,6 +68,7 @@ func main() {
 	workerSvc.Start()
 
 	log.Println("initializing HTTP handlers...")
+	authH := handlers.NewAuthHandler(authSvc)
 	userH := handlers.NewUserHandler(userSvc)
 	modelH := handlers.NewModelHandler(modelSvc)
 	taskH := handlers.NewTaskHandler(inferenceSvc)
@@ -78,7 +80,7 @@ func main() {
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:5173"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Content-Type"},
+		AllowedHeaders:   []string{"Accept", "Content-Type", "Authorization"},
 		AllowCredentials: true,
 	}))
 
@@ -88,6 +90,10 @@ func main() {
 	})
 
 	r.Route("/api", func(r chi.Router) {
+		r.Post("/auth/register", authH.Register)
+		r.Post("/auth/login", authH.Login)
+		r.Get("/auth/me", authH.Me)
+
 		r.Get("/users", userH.GetAll)
 		r.Get("/users/{id}", userH.GetByID)
 		r.Put("/users/{id}", userH.Update)

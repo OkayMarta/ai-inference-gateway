@@ -36,7 +36,7 @@ func (s *AuthService) Register(username, email, password string) (*models.User, 
 	email = strings.TrimSpace(email)
 
 	if err := validateAuthInput(username, email, password); err != nil {
-		return nil, "", err
+		return nil, "", ErrInvalidRegisterInput
 	}
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -54,6 +54,9 @@ func (s *AuthService) Register(username, email, password string) (*models.User, 
 	}
 
 	if err := s.userRepo.Create(user); err != nil {
+		if isDuplicateEmailError(err) {
+			return nil, "", ErrEmailAlreadyExists
+		}
 		return nil, "", err
 	}
 
@@ -150,6 +153,17 @@ func validateAuthInput(username, email, password string) error {
 	}
 
 	return nil
+}
+
+func isDuplicateEmailError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errText := strings.ToLower(err.Error())
+	return strings.Contains(errText, "users_email_unique") ||
+		strings.Contains(errText, "duplicate key") ||
+		strings.Contains(errText, "email already exists")
 }
 
 func jwtSecret() []byte {
