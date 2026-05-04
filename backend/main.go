@@ -92,7 +92,7 @@ func main() {
 	r.Route("/api", func(r chi.Router) {
 		r.Post("/auth/register", authH.Register)
 		r.Post("/auth/login", authH.Login)
-		r.Get("/auth/me", authH.Me)
+		r.With(handlers.AuthMiddleware(authSvc)).Get("/auth/me", authH.Me)
 
 		r.Get("/users", userH.GetAll)
 		r.Get("/users/{id}", userH.GetByID)

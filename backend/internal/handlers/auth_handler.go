@@ -77,19 +77,13 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
-	tokenValue, ok := bearerToken(r.Header.Get("Authorization"))
+	user, ok := CurrentUser(r)
 	if !ok {
 		respondError(w, r, http.StatusUnauthorized, services.ErrUnauthorized.Error())
 		return
 	}
 
-	claims, err := h.service.ValidateToken(tokenValue)
-	if err != nil {
-		respondError(w, r, http.StatusUnauthorized, services.ErrUnauthorized.Error())
-		return
-	}
-
-	respondJSON(w, http.StatusOK, claims)
+	respondJSON(w, http.StatusOK, user)
 }
 
 func bearerToken(authorization string) (string, bool) {
