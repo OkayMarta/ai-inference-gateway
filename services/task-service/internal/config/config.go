@@ -1,0 +1,58 @@
+package config
+
+import (
+	"fmt"
+	"os"
+)
+
+type Config struct {
+	Port              string
+	OllamaURL         string
+	BillingServiceURL string
+	DB                DBConfig
+}
+
+type DBConfig struct {
+	Host     string
+	Port     string
+	User     string
+	Password string
+	Name     string
+	SSLMode  string
+}
+
+func Load() Config {
+	return Config{
+		Port:              envOrDefault("TASK_PORT", "8082"),
+		OllamaURL:         envOrDefault("OLLAMA_URL", "http://localhost:11434"),
+		BillingServiceURL: envOrDefault("BILLING_SERVICE_URL", "http://localhost:8081"),
+		DB: DBConfig{
+			Host:     envOrDefault("DB_HOST", "localhost"),
+			Port:     envOrDefault("DB_PORT", "5432"),
+			User:     envOrDefault("DB_USER", "postgres"),
+			Password: os.Getenv("DB_PASSWORD"),
+			Name:     envOrDefault("DB_NAME", "task_db"),
+			SSLMode:  envOrDefault("DB_SSLMODE", "disable"),
+		},
+	}
+}
+
+func (c DBConfig) ConnectionString() string {
+	return fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s TimeZone=UTC",
+		c.Host,
+		c.Port,
+		c.User,
+		c.Password,
+		c.Name,
+		c.SSLMode,
+	)
+}
+
+func envOrDefault(key, fallback string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	return value
+}
