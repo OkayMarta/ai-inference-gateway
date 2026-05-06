@@ -48,3 +48,7 @@
         font-size: 1.625rem;
     }
 }
+
+#root {
+    overflow-x: hidden;
+}
