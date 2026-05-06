@@ -23,7 +23,7 @@ type DBConfig struct {
 
 func Load() Config {
 	return Config{
-		Port:              envOrDefault("TASK_PORT", "8082"),
+		Port:              envOrDefault("PORT", "8082"),
 		OllamaURL:         envOrDefault("OLLAMA_URL", "http://localhost:11434"),
 		BillingServiceURL: envOrDefault("BILLING_SERVICE_URL", "http://localhost:8081"),
 		DB: DBConfig{

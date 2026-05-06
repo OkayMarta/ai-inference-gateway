@@ -1,5 +1,28 @@
 # AI Inference Gateway (Lab 3)
 
+## Lab 4 Services
+
+Lab 4 decomposes the system into three Go services behind the gateway. The frontend should call only `gateway-service`.
+
+| Service | Default port | Purpose |
+| --- | ---: | --- |
+| `services/gateway-service` | `8080` | Public REST API, CORS, JWT middleware, and request forwarding. |
+| `services/billing-service` | `8081` | Authentication, users, balances, charges, and refunds. |
+| `services/task-service` | `8082` | AI models, prompt tasks, worker nodes, Ollama sync, and task lifecycle. |
+| `frontend` | `5173` | Vite development server. |
+| Ollama | `11434` | Local model runtime used by task-service. |
+| PostgreSQL | `5432` | Database server for `billing_db` and `task_db`. |
+
+Each Lab 4 service has an example environment file. Copy it to `.env` before running the service and adjust local credentials as needed:
+
+```bash
+cp services/gateway-service/.env.example services/gateway-service/.env
+cp services/billing-service/.env.example services/billing-service/.env
+cp services/task-service/.env.example services/task-service/.env
+```
+
+Real `.env` files are local-only and ignored by git. `.env.example` files are intended to stay tracked.
+
 ## Опис
 
 AI Inference Gateway — це навчальний full-stack проєкт, у якому backend на Go виступає шлюзом до локальних AI-моделей через Ollama, а frontend на React дає мінімальний інтерфейс для роботи із задачами.

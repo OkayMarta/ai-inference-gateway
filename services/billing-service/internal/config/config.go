@@ -21,7 +21,7 @@ type DBConfig struct {
 
 func Load() Config {
 	return Config{
-		Port: envOrDefault("BILLING_PORT", "8081"),
+		Port: envOrDefault("PORT", "8081"),
 		DB: DBConfig{
 			Host:     envOrDefault("DB_HOST", "localhost"),
 			Port:     envOrDefault("DB_PORT", "5432"),
