@@ -1,4 +1,4 @@
-const API_BASE = "/api";
+const API_BASE_URL = "http://localhost:8080";
 const DEFAULT_ERROR_MESSAGE = "Server request failed";
 const TOKEN_STORAGE_KEY = "authToken";
 
@@ -36,18 +36,13 @@ const setToken = (token) => {
     }
 };
 
-const request = async (url, options = {}) => {
-    const token = getToken();
+const request = async (path, options = {}) => {
     const headers = {
         "Content-Type": "application/json",
         ...options.headers,
     };
 
-    if (token) {
-        headers.Authorization = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${API_BASE}${url}`, {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
         headers,
         ...options,
     });
@@ -61,12 +56,28 @@ const request = async (url, options = {}) => {
     return data;
 };
 
+const protectedRequest = async (path, options = {}) => {
+    const token = getToken();
+    const headers = {
+        ...options.headers,
+    };
+
+    if (token) {
+        headers.Authorization = `Bearer ${token}`;
+    }
+
+    return request(path, {
+        ...options,
+        headers,
+    });
+};
+
 export const api = {
     getToken,
     setToken,
     logout: () => setToken(""),
     login: async (email, password) => {
-        const data = await request("/auth/login", {
+        const data = await request("/api/auth/login", {
             method: "POST",
             body: JSON.stringify({ email, password }),
         });
@@ -74,22 +85,19 @@ export const api = {
         return data;
     },
     register: async (username, email, password) => {
-        const data = await request("/auth/register", {
+        const data = await request("/api/auth/register", {
             method: "POST",
             body: JSON.stringify({ username, email, password }),
         });
         setToken(data.token);
         return data;
     },
-    getMe: () => request("/auth/me"),
-    getUsers: () => request("/users"),
-    getModels: () => request("/models"),
+    getMe: () => protectedRequest("/api/auth/me"),
+    getUsers: async () => [await protectedRequest("/api/auth/me")],
+    getModels: () => request("/api/models"),
     getTasks: (params = {}) => {
         const query = new URLSearchParams();
 
-        if (params.userId) {
-            query.set("userId", params.userId);
-        }
         if (params.status) {
             query.set("status", params.status);
         }
@@ -104,16 +112,22 @@ export const api = {
         }
 
         const suffix = query.toString() ? `?${query.toString()}` : "";
-        return request(`/tasks${suffix}`);
+        return protectedRequest(`/api/tasks${suffix}`);
     },
     submitTask: (modelId, payload) => {
-        return request("/tasks", {
+        return protectedRequest("/api/tasks", {
             method: "POST",
             body: JSON.stringify({ modelId, payload }),
         });
     },
+    getTask: (taskId) => protectedRequest(`/api/tasks/${encodeURIComponent(taskId)}`),
+    updateTask: (taskId, payload) =>
+        protectedRequest(`/api/tasks/${encodeURIComponent(taskId)}`, {
+            method: "PUT",
+            body: JSON.stringify({ payload }),
+        }),
     deleteTask: (taskId) =>
-        request(`/tasks/${encodeURIComponent(taskId)}`, {
+        protectedRequest(`/api/tasks/${encodeURIComponent(taskId)}`, {
             method: "DELETE",
         }),
 };
