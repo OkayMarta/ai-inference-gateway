@@ -568,6 +568,7 @@ const Dashboard = () => {
             <AuthForm
                 onLogin={handleLogin}
                 onRegister={handleRegister}
+                onBackToLanding={() => setLandingStarted(false)}
                 loading={authLoading}
                 error={authError}
             />

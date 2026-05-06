@@ -1,6 +1,7 @@
 import { useState } from "react";
+import logoMark from "../assets/logo.png";
 
-const AuthForm = ({ onLogin, onRegister, loading, error }) => {
+const AuthForm = ({ onLogin, onRegister, onBackToLanding, loading, error }) => {
     const [mode, setMode] = useState("login");
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
@@ -34,6 +35,19 @@ const AuthForm = ({ onLogin, onRegister, loading, error }) => {
 
     return (
         <section className="auth-shell" aria-label="Authentication">
+            <div className="auth-glow auth-glow-primary" aria-hidden="true" />
+            <div className="auth-glow auth-glow-secondary" aria-hidden="true" />
+
+            <button
+                type="button"
+                className="auth-brand"
+                onClick={onBackToLanding}
+                aria-label="Back to landing page"
+            >
+                <img src={logoMark} alt="" className="auth-logo" />
+                <span>AI Inference Gateway</span>
+            </button>
+
             <div className="auth-card">
                 <div className="auth-tabs" role="tablist" aria-label="Authentication mode">
                     <button
@@ -58,6 +72,7 @@ const AuthForm = ({ onLogin, onRegister, loading, error }) => {
                             <span className="field-label">Username</span>
                             <input
                                 className="field-input"
+                                placeholder="Choose a username"
                                 value={username}
                                 onChange={(event) => setUsername(event.target.value)}
                                 autoComplete="username"
@@ -71,6 +86,7 @@ const AuthForm = ({ onLogin, onRegister, loading, error }) => {
                         <input
                             className="field-input"
                             type="email"
+                            placeholder={isRegister ? "you@example.com" : "Enter your email"}
                             value={email}
                             onChange={(event) => setEmail(event.target.value)}
                             autoComplete="email"
@@ -84,6 +100,11 @@ const AuthForm = ({ onLogin, onRegister, loading, error }) => {
                             <input
                                 className="field-input password-input"
                                 type={showPassword ? "text" : "password"}
+                                placeholder={
+                                    isRegister
+                                        ? "Create a strong password"
+                                        : "Enter your password"
+                                }
                                 value={password}
                                 onChange={(event) => setPassword(event.target.value)}
                                 autoComplete={isRegister ? "new-password" : "current-password"}
@@ -120,11 +141,30 @@ const AuthForm = ({ onLogin, onRegister, loading, error }) => {
                         </span>
                     </label>
 
+                    {!isRegister && (
+                        <button
+                            type="button"
+                            className="forgot-password-button"
+                            onClick={() => undefined}
+                        >
+                            Forgot password?
+                        </button>
+                    )}
+
                     {error && <div className="notice notice-error">{error}</div>}
 
                     <button type="submit" className="submit-button" disabled={loading}>
                         {loading ? "Please wait..." : isRegister ? "Create account" : "Login"}
                     </button>
+
+                    {isRegister && (
+                        <p className="auth-switch-copy">
+                            Already have an account?{" "}
+                            <button type="button" onClick={() => switchMode("login")}>
+                                Log in
+                            </button>
+                        </p>
+                    )}
                 </form>
             </div>
         </section>
