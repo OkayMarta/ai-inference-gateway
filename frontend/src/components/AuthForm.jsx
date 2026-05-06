@@ -1,17 +1,47 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import logoMark from "../assets/logo.png";
 
-const AuthForm = ({ onLogin, onRegister, onBackToLanding, loading, error }) => {
-    const [mode, setMode] = useState("login");
+const AuthForm = ({
+    onLogin,
+    onRegister,
+    onForgotPassword,
+    onResetPassword,
+    onBackToLanding,
+    loading,
+    error,
+    success,
+    resetToken,
+}) => {
+    const [mode, setMode] = useState(resetToken ? "reset" : "login");
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
 
     const isRegister = mode === "register";
+    const isForgot = mode === "forgot";
+    const isReset = mode === "reset";
+
+    useEffect(() => {
+        if (resetToken) {
+            setMode("reset");
+            setPassword("");
+            setShowPassword(false);
+        }
+    }, [resetToken]);
 
     const handleSubmit = (event) => {
         event.preventDefault();
+        if (isForgot) {
+            onForgotPassword({ email: email.trim() });
+            return;
+        }
+
+        if (isReset) {
+            onResetPassword({ token: resetToken, newPassword: password });
+            return;
+        }
+
         if (isRegister) {
             onRegister({
                 username: username.trim(),
@@ -33,6 +63,21 @@ const AuthForm = ({ onLogin, onRegister, onBackToLanding, loading, error }) => {
         setShowPassword(false);
     };
 
+    const title = isForgot
+        ? "Reset access"
+        : isReset
+          ? "Set new password"
+          : isRegister
+            ? "Create account"
+            : "Login";
+
+    const passwordLabel = isReset ? "New password" : "Password";
+    const passwordPlaceholder = isReset
+        ? "Enter a new password"
+        : isRegister
+          ? "Create a strong password"
+          : "Enter your password";
+
     return (
         <section className="auth-shell" aria-label="Authentication">
             <div className="auth-glow auth-glow-primary" aria-hidden="true" />
@@ -49,22 +94,28 @@ const AuthForm = ({ onLogin, onRegister, onBackToLanding, loading, error }) => {
             </button>
 
             <div className="auth-card">
-                <div className="auth-tabs" role="tablist" aria-label="Authentication mode">
-                    <button
-                        type="button"
-                        className={`auth-tab${!isRegister ? " auth-tab-active" : ""}`}
-                        onClick={() => switchMode("login")}
-                    >
-                        Login
-                    </button>
-                    <button
-                        type="button"
-                        className={`auth-tab${isRegister ? " auth-tab-active" : ""}`}
-                        onClick={() => switchMode("register")}
-                    >
-                        Register
-                    </button>
-                </div>
+                {isForgot || isReset ? (
+                    <div className="auth-mode-heading">
+                        <h2>{title}</h2>
+                    </div>
+                ) : (
+                    <div className="auth-tabs" role="tablist" aria-label="Authentication mode">
+                        <button
+                            type="button"
+                            className={`auth-tab${!isRegister ? " auth-tab-active" : ""}`}
+                            onClick={() => switchMode("login")}
+                        >
+                            Login
+                        </button>
+                        <button
+                            type="button"
+                            className={`auth-tab${isRegister ? " auth-tab-active" : ""}`}
+                            onClick={() => switchMode("register")}
+                        >
+                            Register
+                        </button>
+                    </div>
+                )}
 
                 <form className="auth-form" onSubmit={handleSubmit}>
                     {isRegister && (
@@ -81,33 +132,42 @@ const AuthForm = ({ onLogin, onRegister, onBackToLanding, loading, error }) => {
                         </label>
                     )}
 
-                    <label className="auth-field">
+                    {!isReset && (
+                        <label className="auth-field">
                         <span className="field-label">Email</span>
                         <input
                             className="field-input"
-                            type="email"
-                            placeholder={isRegister ? "you@example.com" : "Enter your email"}
+                                type="email"
+                                placeholder={
+                                    isForgot
+                                        ? "Email linked to your account"
+                                        : isRegister
+                                          ? "you@example.com"
+                                          : "Enter your email"
+                                }
                             value={email}
                             onChange={(event) => setEmail(event.target.value)}
                             autoComplete="email"
                             required
                         />
                     </label>
+                    )}
 
-                    <label className="auth-field">
-                        <span className="field-label">Password</span>
+                    {!isForgot && (
+                        <label className="auth-field">
+                            <span className="field-label">{passwordLabel}</span>
                         <span className="password-input-wrap">
                             <input
                                 className="field-input password-input"
                                 type={showPassword ? "text" : "password"}
-                                placeholder={
-                                    isRegister
-                                        ? "Create a strong password"
-                                        : "Enter your password"
-                                }
+                                    placeholder={passwordPlaceholder}
                                 value={password}
                                 onChange={(event) => setPassword(event.target.value)}
-                                autoComplete={isRegister ? "new-password" : "current-password"}
+                                    autoComplete={
+                                        isRegister || isReset
+                                            ? "new-password"
+                                            : "current-password"
+                                    }
                                 minLength={6}
                                 required
                             />
@@ -140,28 +200,38 @@ const AuthForm = ({ onLogin, onRegister, onBackToLanding, loading, error }) => {
                             </button>
                         </span>
                     </label>
+                    )}
 
-                    {!isRegister && (
+                    {!isRegister && !isForgot && !isReset && (
                         <button
                             type="button"
                             className="forgot-password-button"
-                            onClick={() => undefined}
+                            onClick={() => switchMode("forgot")}
                         >
                             Forgot password?
                         </button>
                     )}
 
                     {error && <div className="notice notice-error">{error}</div>}
+                    {success && <div className="notice notice-success">{success}</div>}
 
                     <button type="submit" className="submit-button" disabled={loading}>
-                        {loading ? "Please wait..." : isRegister ? "Create account" : "Login"}
+                        {loading
+                            ? "Please wait..."
+                            : isForgot
+                              ? "Send reset link"
+                              : isReset
+                                ? "Reset password"
+                                : isRegister
+                                  ? "Create account"
+                                  : "Login"}
                     </button>
 
-                    {isRegister && (
+                    {(isRegister || isForgot || isReset) && (
                         <p className="auth-switch-copy">
-                            Already have an account?{" "}
+                            {isRegister ? "Already have an account? " : ""}
                             <button type="button" onClick={() => switchMode("login")}>
-                                Log in
+                                Back to login
                             </button>
                         </p>
                     )}

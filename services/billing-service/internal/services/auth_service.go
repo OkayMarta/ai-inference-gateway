@@ -1,6 +1,13 @@
 package services
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
+	"fmt"
+	"log"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -17,7 +24,9 @@ const (
 )
 
 type AuthService struct {
-	userRepo UserRepository
+	userRepo    UserRepository
+	resetRepo   PasswordResetRepository
+	emailSender PasswordResetEmailSender
 }
 
 type AuthClaims struct {
@@ -27,8 +36,12 @@ type AuthClaims struct {
 	jwt.RegisteredClaims
 }
 
-func NewAuthService(userRepo UserRepository) *AuthService {
-	return &AuthService{userRepo: userRepo}
+func NewAuthService(userRepo UserRepository, resetRepo PasswordResetRepository, emailSender PasswordResetEmailSender) *AuthService {
+	return &AuthService{
+		userRepo:    userRepo,
+		resetRepo:   resetRepo,
+		emailSender: emailSender,
+	}
 }
 
 func (s *AuthService) Register(username, email, password string) (*models.User, string, error) {
@@ -94,6 +107,79 @@ func (s *AuthService) Login(email, password string) (*models.User, string, error
 	return user, token, nil
 }
 
+func (s *AuthService) RequestPasswordReset(email string) error {
+	email = strings.TrimSpace(email)
+	if email == "" || !strings.Contains(email, "@") {
+		return ErrInvalidPasswordResetInput
+	}
+
+	user, err := s.userRepo.GetByEmail(email)
+	if err != nil {
+		if isRepoNotFoundError(err, "user not found:") {
+			return nil
+		}
+		return err
+	}
+
+	rawToken, err := generateResetToken()
+	if err != nil {
+		return err
+	}
+
+	token := &models.PasswordResetToken{
+		ID:        generateID(),
+		UserID:    user.ID,
+		TokenHash: hashResetToken(rawToken),
+		ExpiresAt: time.Now().UTC().Add(time.Duration(passwordResetTTLMinutes()) * time.Minute),
+	}
+
+	if err := s.resetRepo.Create(token); err != nil {
+		return err
+	}
+
+	resetLink, err := buildResetLink(rawToken)
+	if err != nil {
+		return err
+	}
+
+	if err := s.emailSender.SendPasswordResetEmail(user.Email, resetLink); err != nil {
+		log.Printf("failed to send password reset email for user %s: %v", user.ID, err)
+		return nil
+	}
+
+	return nil
+}
+
+func (s *AuthService) ResetPassword(tokenValue, newPassword string) error {
+	tokenValue = strings.TrimSpace(tokenValue)
+	if tokenValue == "" || len(newPassword) < 6 {
+		return ErrInvalidPasswordResetInput
+	}
+
+	resetToken, err := s.resetRepo.GetValidByTokenHash(hashResetToken(tokenValue))
+	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "password reset token not found") {
+			return ErrInvalidPasswordResetToken
+		}
+		return err
+	}
+
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	if err := s.userRepo.UpdatePasswordHash(resetToken.UserID, string(passwordHash)); err != nil {
+		return err
+	}
+
+	if err := s.resetRepo.MarkUsed(resetToken.ID); err != nil {
+		return fmt.Errorf("password updated but reset token could not be marked used: %w", err)
+	}
+
+	return nil
+}
+
 func (s *AuthService) GenerateToken(user *models.User) (string, error) {
 	if user == nil || user.ID == "" || user.Email == "" || user.Role == "" {
 		return "", ErrInvalidAuthInput
@@ -150,6 +236,35 @@ func validateAuthInput(username, email, password string) error {
 	}
 
 	return nil
+}
+
+func generateResetToken() (string, error) {
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return "", fmt.Errorf("generate password reset token: %w", err)
+	}
+
+	return base64.RawURLEncoding.EncodeToString(tokenBytes), nil
+}
+
+func hashResetToken(tokenValue string) string {
+	hash := sha256.Sum256([]byte(tokenValue))
+	return hex.EncodeToString(hash[:])
+}
+
+func buildResetLink(tokenValue string) (string, error) {
+	frontendURL := envOrDefault("FRONTEND_URL", "http://localhost:5173")
+	parsed, err := url.Parse(frontendURL)
+	if err != nil {
+		return "", fmt.Errorf("parse frontend url: %w", err)
+	}
+
+	parsed.Path = "/reset-password"
+	query := parsed.Query()
+	query.Set("token", tokenValue)
+	parsed.RawQuery = query.Encode()
+
+	return parsed.String(), nil
 }
 
 func isDuplicateEmailError(err error) bool {

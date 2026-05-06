@@ -56,6 +56,10 @@ func mapErrorToStatus(err error) int {
 		return http.StatusBadRequest
 	case errors.Is(err, services.ErrInvalidBillingInput):
 		return http.StatusBadRequest
+	case errors.Is(err, services.ErrInvalidPasswordResetInput):
+		return http.StatusBadRequest
+	case errors.Is(err, services.ErrInvalidPasswordResetToken):
+		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError
 	}

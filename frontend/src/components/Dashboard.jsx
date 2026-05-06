@@ -31,6 +31,9 @@ const sameUserSnapshot = (left, right) => {
 };
 
 const Dashboard = () => {
+    const [passwordResetToken, setPasswordResetToken] = useState(() => {
+        return new URLSearchParams(window.location.search).get("token") || "";
+    });
     const [landingStarted, setLandingStarted] = useState(false);
     const [authUser, setAuthUser] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
@@ -43,6 +46,7 @@ const Dashboard = () => {
 
     const [authLoading, setAuthLoading] = useState(Boolean(api.getToken()));
     const [authError, setAuthError] = useState("");
+    const [authSuccess, setAuthSuccess] = useState("");
     const [bootLoading, setBootLoading] = useState(false);
     const [taskLoading, setTaskLoading] = useState(false);
     const [submitLoading, setSubmitLoading] = useState(false);
@@ -103,6 +107,13 @@ const Dashboard = () => {
         let active = true;
 
         const restoreSession = async () => {
+            if (passwordResetToken) {
+                api.logout();
+                setAuthLoading(false);
+                setLandingStarted(true);
+                return;
+            }
+
             if (!api.getToken()) {
                 setAuthLoading(false);
                 return;
@@ -137,7 +148,7 @@ const Dashboard = () => {
         return () => {
             active = false;
         };
-    }, []);
+    }, [passwordResetToken]);
 
     useEffect(() => {
         if (!currentUser) {
@@ -277,6 +288,7 @@ const Dashboard = () => {
     const completeAuth = async (authAction) => {
         setAuthLoading(true);
         setAuthError("");
+        setAuthSuccess("");
 
         try {
             await authAction();
@@ -301,6 +313,38 @@ const Dashboard = () => {
         completeAuth(() => api.register(username, email, password));
     };
 
+    const handleForgotPassword = async ({ email }) => {
+        setAuthLoading(true);
+        setAuthError("");
+        setAuthSuccess("");
+
+        try {
+            const response = await api.requestPasswordReset(email);
+            setAuthSuccess(response.message);
+        } catch (error) {
+            setAuthError(error.message);
+        } finally {
+            setAuthLoading(false);
+        }
+    };
+
+    const handleResetPassword = async ({ token, newPassword }) => {
+        setAuthLoading(true);
+        setAuthError("");
+        setAuthSuccess("");
+
+        try {
+            const response = await api.resetPassword(token, newPassword);
+            setAuthSuccess(`${response.message} You can now log in.`);
+            setPasswordResetToken("");
+            window.history.replaceState({}, "", window.location.pathname);
+        } catch (error) {
+            setAuthError(error.message);
+        } finally {
+            setAuthLoading(false);
+        }
+    };
+
     const handleLogout = () => {
         api.logout();
         setAuthUser(null);
@@ -312,6 +356,7 @@ const Dashboard = () => {
         setStatusFilter("");
         setScreenError("");
         setAuthError("");
+        setAuthSuccess("");
         setLandingStarted(false);
     };
 
@@ -568,9 +613,13 @@ const Dashboard = () => {
             <AuthForm
                 onLogin={handleLogin}
                 onRegister={handleRegister}
+                onForgotPassword={handleForgotPassword}
+                onResetPassword={handleResetPassword}
                 onBackToLanding={() => setLandingStarted(false)}
                 loading={authLoading}
                 error={authError}
+                success={authSuccess}
+                resetToken={passwordResetToken}
             />
         );
     }

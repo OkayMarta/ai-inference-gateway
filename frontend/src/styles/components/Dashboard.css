@@ -556,6 +556,17 @@
     color: #ffffff;
 }
 
+.auth-mode-heading {
+    margin-bottom: 28px;
+}
+
+.auth-mode-heading h2 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 1.6rem;
+    font-weight: 800;
+}
+
 .auth-form,
 .auth-field {
     display: flex;

@@ -92,6 +92,16 @@ export const api = {
         setToken(data.token);
         return data;
     },
+    requestPasswordReset: (email) =>
+        request("/api/auth/forgot-password", {
+            method: "POST",
+            body: JSON.stringify({ email }),
+        }),
+    resetPassword: (token, newPassword) =>
+        request("/api/auth/reset-password", {
+            method: "POST",
+            body: JSON.stringify({ token, newPassword }),
+        }),
     getMe: () => protectedRequest("/api/auth/me"),
     getUsers: async () => [await protectedRequest("/api/auth/me")],
     getModels: () => request("/api/models"),

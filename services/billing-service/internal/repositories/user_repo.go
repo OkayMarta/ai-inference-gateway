@@ -141,6 +141,19 @@ func (r *UserRepository) Update(user *models.User) error {
 	return ensureRowsAffected(result, fmt.Sprintf("user not found: %s", user.ID))
 }
 
+func (r *UserRepository) UpdatePasswordHash(userID string, passwordHash string) error {
+	result, err := r.db.Exec(`
+		UPDATE users
+		SET password_hash = $2
+		WHERE id = $1
+	`, userID, passwordHash)
+	if err != nil {
+		return fmt.Errorf("update password hash for user %s: %w", userID, err)
+	}
+
+	return ensureRowsAffected(result, fmt.Sprintf("user not found: %s", userID))
+}
+
 func (r *UserRepository) DeductBalanceTx(tx appdb.DBTX, id string, amount float64) error {
 	result, err := tx.Exec(`
 		UPDATE users

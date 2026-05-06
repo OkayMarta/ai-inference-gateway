@@ -27,6 +27,14 @@ func (h *ProxyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	h.forward(w, r, h.billing.ProxyClient, "/api/auth/login", nil)
 }
 
+func (h *ProxyHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	h.forward(w, r, h.billing.ProxyClient, "/api/auth/forgot-password", nil)
+}
+
+func (h *ProxyHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	h.forward(w, r, h.billing.ProxyClient, "/api/auth/reset-password", nil)
+}
+
 func (h *ProxyHandler) Me(w http.ResponseWriter, r *http.Request) {
 	user, ok := middleware.CurrentUser(r)
 	if !ok {

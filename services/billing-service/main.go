@@ -32,8 +32,10 @@ func main() {
 
 	userRepo := repositories.NewUserRepository(postgresDB)
 	txRepo := repositories.NewTransactionRepository(postgresDB)
+	resetRepo := repositories.NewPasswordResetRepository(postgresDB)
+	emailSvc := services.NewEmailServiceFromEnv()
 
-	authSvc := services.NewAuthService(userRepo)
+	authSvc := services.NewAuthService(userRepo, resetRepo, emailSvc)
 	userSvc := services.NewUserService(userRepo)
 	billingSvc := services.NewBillingService(postgresDB, userRepo, txRepo)
 
@@ -59,6 +61,8 @@ func main() {
 	r.Route("/api", func(r chi.Router) {
 		r.Post("/auth/register", authH.Register)
 		r.Post("/auth/login", authH.Login)
+		r.Post("/auth/forgot-password", authH.ForgotPassword)
+		r.Post("/auth/reset-password", authH.ResetPassword)
 
 		r.Group(func(r chi.Router) {
 			r.Use(handlers.AuthMiddleware(authSvc))

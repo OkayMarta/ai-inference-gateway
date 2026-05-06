@@ -44,6 +44,8 @@ func main() {
 	r.Route("/api", func(r chi.Router) {
 		r.Post("/auth/register", proxy.Register)
 		r.Post("/auth/login", proxy.Login)
+		r.Post("/auth/forgot-password", proxy.ForgotPassword)
+		r.Post("/auth/reset-password", proxy.ResetPassword)
 		r.Get("/models", proxy.Models)
 
 		r.Group(func(r chi.Router) {
