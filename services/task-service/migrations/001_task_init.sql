@@ -39,4 +39,8 @@ CREATE INDEX IF NOT EXISTS idx_prompt_tasks_status ON prompt_tasks(status);
 CREATE INDEX IF NOT EXISTS idx_prompt_tasks_created_at ON prompt_tasks(created_at);
 CREATE INDEX IF NOT EXISTS idx_worker_supported_models_model_id ON worker_supported_models(model_id);
 
+INSERT INTO worker_nodes (id, status)
+VALUES ('worker-1', 'Idle')
+ON CONFLICT (id) DO NOTHING;
+
 COMMIT;

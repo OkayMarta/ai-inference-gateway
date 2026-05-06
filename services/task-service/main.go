@@ -42,12 +42,22 @@ func main() {
 	workerSvc := services.NewWorkerService(workerRepo, taskRepo, modelRepo, ollama)
 	inferenceSvc := services.NewInferenceService(postgresDB, modelRepo, taskRepo, billingClient)
 
+	log.Println("synchronizing models from Ollama")
 	if err := modelSvc.SyncFromOllama(); err != nil {
 		log.Printf("failed to synchronize models from Ollama: %v", err)
-	} else if err := workerSvc.RefreshSupportedModels(); err != nil {
+	}
+
+	log.Println("ensuring default worker exists")
+	if err := workerSvc.EnsureDefaultWorker(); err != nil {
+		log.Fatalf("failed to ensure default worker: %v", err)
+	}
+
+	log.Println("refreshing worker supported models")
+	if err := workerSvc.RefreshSupportedModels(); err != nil {
 		log.Printf("failed to refresh worker/model mappings: %v", err)
 	}
 
+	log.Println("starting background worker service")
 	workerSvc.Start()
 
 	modelH := handlers.NewModelHandler(modelSvc)

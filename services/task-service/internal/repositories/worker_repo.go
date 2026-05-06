@@ -133,6 +133,20 @@ func (r *WorkerRepository) Create(worker *models.WorkerNode) error {
 	return nil
 }
 
+func (r *WorkerRepository) EnsureDefaultWorker(id string) error {
+	_, err := r.db.Exec(`
+		INSERT INTO worker_nodes (id, status)
+		VALUES ($1, $2)
+		ON CONFLICT (id) DO UPDATE
+		SET status = EXCLUDED.status
+	`, id, models.WorkerIdle)
+	if err != nil {
+		return fmt.Errorf("ensure default worker %s: %w", id, err)
+	}
+
+	return nil
+}
+
 func (r *WorkerRepository) Update(worker *models.WorkerNode) error {
 	tx, err := r.db.Begin()
 	if err != nil {

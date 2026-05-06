@@ -41,6 +41,7 @@ type WorkerRepository interface {
 	GetAll() ([]*models.WorkerNode, error)
 	GetIdle() ([]*models.WorkerNode, error)
 	GetByID(id string) (*models.WorkerNode, error)
+	EnsureDefaultWorker(id string) error
 	Create(worker *models.WorkerNode) error
 	Update(worker *models.WorkerNode) error
 	UpdateStatus(id string, status models.WorkerStatus) error

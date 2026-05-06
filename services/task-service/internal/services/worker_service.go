@@ -16,6 +16,8 @@ type WorkerService struct {
 	ollama     *OllamaClient
 }
 
+const defaultWorkerID = "worker-1"
+
 func NewWorkerService(
 	workerRepo WorkerRepository,
 	taskRepo TaskRepository,
@@ -32,12 +34,20 @@ func NewWorkerService(
 
 func (s *WorkerService) Start() {
 	go func() {
-		log.Println("[WorkerService] Background processing started")
+		log.Println("[WorkerService] background worker service started")
 		for {
 			s.processNext()
 			time.Sleep(500 * time.Millisecond)
 		}
 	}()
+}
+
+func (s *WorkerService) EnsureDefaultWorker() error {
+	if err := s.workerRepo.EnsureDefaultWorker(defaultWorkerID); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // RefreshSupportedModels синхронізує persisted mapping між воркерами та моделями.
