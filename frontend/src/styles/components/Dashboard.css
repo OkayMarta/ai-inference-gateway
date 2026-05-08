@@ -141,8 +141,11 @@
 
 .landing-page {
     position: relative;
+    height: 100vh;
+    height: 100svh;
     min-height: 100vh;
     min-height: 100svh;
+    overflow-y: auto;
     background:
         radial-gradient(
             circle at 91% 86%,
@@ -3718,5 +3721,39 @@
 
     .logout-button {
         width: 100%;
+    }
+}
+
+.landing-features,
+.landing-models,
+.landing-pricing {
+    padding-top: clamp(40px, 7vh, 72px);
+    padding-bottom: clamp(40px, 7vh, 72px);
+}
+
+@media (max-height: 780px) and (min-width: 1024px) {
+    .landing-features,
+    .landing-models,
+    .landing-pricing {
+        padding-top: clamp(24px, 5vh, 42px);
+        padding-bottom: clamp(24px, 5vh, 42px);
+    }
+}
+
+@media (max-width: 1023px) {
+    .landing-features,
+    .landing-models,
+    .landing-pricing {
+        padding-top: clamp(44px, 7vh, 68px);
+        padding-bottom: clamp(44px, 7vh, 68px);
+    }
+}
+
+@media (max-width: 760px) {
+    .landing-features,
+    .landing-models,
+    .landing-pricing {
+        padding-top: 52px;
+        padding-bottom: 52px;
     }
 }

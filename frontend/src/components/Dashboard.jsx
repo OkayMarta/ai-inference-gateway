@@ -440,44 +440,6 @@ const Dashboard = () => {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [mobileMenuOpen]);
 
-    useEffect(() => {
-        if (landingStarted || api.getToken()) {
-            setLandingNavHidden(false);
-            return undefined;
-        }
-
-        let lastScrollY = window.scrollY;
-        let ticking = false;
-
-        const handleScroll = () => {
-            if (ticking) {
-                return;
-            }
-
-            ticking = true;
-            window.requestAnimationFrame(() => {
-                const currentScrollY = window.scrollY;
-                const scrollDelta = currentScrollY - lastScrollY;
-
-                if (currentScrollY <= 24) {
-                    setLandingNavHidden(false);
-                } else if (scrollDelta > 6) {
-                    setLandingNavHidden(true);
-                } else if (scrollDelta < -8) {
-                    setLandingNavHidden(false);
-                }
-
-                lastScrollY = currentScrollY;
-                ticking = false;
-            });
-        };
-
-        handleScroll();
-        window.addEventListener("scroll", handleScroll, { passive: true });
-
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, [landingStarted]);
-
     const completeAuth = async (authAction) => {
         setAuthLoading(true);
         setAuthError("");
@@ -569,6 +531,10 @@ const Dashboard = () => {
     const handleStatusFilterChange = (event) => {
         setStatusFilter(event.target.value);
         setScreenError("");
+    };
+
+    const handleLandingScroll = (event) => {
+        setLandingNavHidden(event.currentTarget.scrollTop > 24);
     };
 
     const handleSubmit = async (event) => {
@@ -671,7 +637,7 @@ const Dashboard = () => {
 
     if (!landingStarted && !api.getToken()) {
         return (
-            <div className="landing-page">
+            <div className="landing-page" onScroll={handleLandingScroll}>
                 <header
                     className={`landing-nav${landingNavHidden ? " landing-nav-hidden" : ""}`}
                     aria-label="Primary navigation"
