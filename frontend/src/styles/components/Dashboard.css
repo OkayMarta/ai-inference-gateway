@@ -3108,7 +3108,10 @@
     }
 
     .pricing-note {
+        flex-direction: column-reverse;
+        gap: 12px;
         margin-top: 32px;
+        text-align: center;
     }
 }
 
@@ -3408,9 +3411,13 @@
     }
 
     .pricing-note {
-        align-items: flex-start;
+        align-items: center;
+        flex-direction: column-reverse;
+        gap: 12px;
+        justify-content: center;
         margin-top: 28px;
         font-size: 0.94rem;
+        text-align: center;
     }
 }
 
@@ -3747,6 +3754,10 @@
         padding-top: clamp(44px, 7vh, 68px);
         padding-bottom: clamp(44px, 7vh, 68px);
     }
+
+    .landing-pricing {
+        padding-bottom: 28px;
+    }
 }
 
 @media (max-width: 760px) {
@@ -3755,5 +3766,9 @@
     .landing-pricing {
         padding-top: 52px;
         padding-bottom: 52px;
+    }
+
+    .landing-pricing {
+        padding-bottom: 24px;
     }
 }
