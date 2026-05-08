@@ -2,10 +2,8 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 20px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    gap: 14px;
+    margin-bottom: 16px;
 }
 
 .section-card-heading {
@@ -14,9 +12,9 @@
 
 .section-card-title {
     margin: 0;
-    color: #e2e8f0;
-    font-size: 0.875rem;
-    font-weight: 500;
+    color: #ffffff;
+    font-size: 1.06rem;
+    font-weight: 800;
 }
 
 .section-card-subtitle {

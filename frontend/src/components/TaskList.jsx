@@ -1,3 +1,4 @@
+import { useState } from "react";
 import EmptyState from "./EmptyState";
 import SectionCard from "./SectionCard";
 import StatusBadge from "./StatusBadge";
@@ -46,6 +47,33 @@ const TaskList = ({
     cancelLoadingTaskId,
 }) => {
     const hasSelectedUser = Boolean(selectedUserId);
+    const [expandedTaskIds, setExpandedTaskIds] = useState(() => new Set());
+
+    const toggleExpandedTask = (taskId) => {
+        setExpandedTaskIds((previousIds) => {
+            const nextIds = new Set(previousIds);
+            if (nextIds.has(taskId)) {
+                nextIds.delete(taskId);
+            } else {
+                nextIds.add(taskId);
+            }
+            return nextIds;
+        });
+    };
+
+    const panelTitle = (
+        <span className="panel-title-with-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9 6h11" />
+                <path d="M9 12h11" />
+                <path d="M9 18h11" />
+                <path d="M4 6h.01" />
+                <path d="M4 12h.01" />
+                <path d="M4 18h.01" />
+            </svg>
+            <span>Tasks</span>
+        </span>
+    );
 
     const taskSummary = (
         <div className="task-summary">
@@ -124,6 +152,9 @@ const TaskList = ({
                         {sortedTasks.map((task) => {
                             const taskModel =
                                 models.find((model) => model.id === task.modelId) || null;
+                            const taskResult = getTaskResult(task);
+                            const isExpandableResult = taskResult.length > 220;
+                            const isExpanded = expandedTaskIds.has(task.id);
 
                             return (
                                 <article key={task.id} className="task-card">
@@ -135,7 +166,13 @@ const TaskList = ({
                                             </span>
                                         </div>
                                         <span className="task-created-at">
-                                            {formatTimestamp(task.createdAt)}
+                                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                <path d="M8 2v4" />
+                                                <path d="M16 2v4" />
+                                                <path d="M3 10h18" />
+                                                <rect x="3" y="4" width="18" height="18" rx="2" />
+                                            </svg>
+                                            <span>{formatTimestamp(task.createdAt)}</span>
                                         </span>
                                     </div>
 
@@ -169,9 +206,34 @@ const TaskList = ({
                                         </div>
                                         <div className="task-detail task-detail-wide">
                                             <dt>Result</dt>
-                                            <dd>{getTaskResult(task)}</dd>
+                                            <dd className={isExpanded ? "" : "task-result-preview"}>
+                                                {taskResult}
+                                            </dd>
                                         </div>
                                     </dl>
+
+                                    {isExpandableResult && (
+                                        <button
+                                            type="button"
+                                            className="task-result-button"
+                                            onClick={() => toggleExpandedTask(task.id)}
+                                        >
+                                            <span>{isExpanded ? "Show less" : "View full result"}</span>
+                                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                {isExpanded ? (
+                                                    <>
+                                                        <path d="M18 6 6 18" />
+                                                        <path d="M6 6h12v12" />
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <path d="M7 17 17 7" />
+                                                        <path d="M7 7h10v10" />
+                                                    </>
+                                                )}
+                                            </svg>
+                                        </button>
+                                    )}
                                 </article>
                             );
                         })}
@@ -184,7 +246,7 @@ const TaskList = ({
     return (
         <SectionCard
             className="task-panel"
-            title="Tasks"
+            title={panelTitle}
             rightSlot={
                 <div className="task-panel-toolbar">
                     {hasSelectedUser ? (

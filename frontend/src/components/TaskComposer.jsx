@@ -22,9 +22,19 @@ const TaskComposer = ({
 }) => {
     const noModelsNotice =
         "No models are available. Make sure Ollama is running and has models loaded.";
+    const panelTitle = (
+        <span className="panel-title-with-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3l1.7 4.6L18 9.3l-4.3 1.7L12 16l-1.7-5L6 9.3l4.3-1.7L12 3Z" />
+                <path d="M5 15l.9 2.1L8 18l-2.1.9L5 21l-.9-2.1L2 18l2.1-.9L5 15Z" />
+                <path d="M19 14l.7 1.6 1.6.7-1.6.7L19 19l-.7-1.6-1.6-.7 1.6-.7L19 14Z" />
+            </svg>
+            <span>Create task</span>
+        </span>
+    );
 
     return (
-        <SectionCard as="aside" className="control-panel">
+        <SectionCard as="aside" className="control-panel" title={panelTitle}>
             <form className="control-form" onSubmit={onSubmit}>
                 {(balanceAlert || submitError || submitSuccess) && (
                     <div className="floating-notice-stack" aria-live="polite">
@@ -102,23 +112,40 @@ const TaskComposer = ({
                         key={`balance-${metricFlashToken}`}
                         className={`metric-card${balanceAlert ? " metric-card-alert" : ""}`}
                     >
-                        <span className="metric-label">Balance</span>
-                        <span className="metric-value">
-                            {currentUser ? currentUser.tokenBalance.toFixed(1) : "-"}
-                        </span>
+                        <svg className="metric-icon metric-icon-balance" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M4 7h14a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h13" />
+                            <path d="M18 12h4v4h-4a2 2 0 0 1 0-4Z" />
+                            <path d="M6 8h9" />
+                        </svg>
+                        <div>
+                            <span className="metric-label">Balance</span>
+                            <span className="metric-value">
+                                {currentUser ? currentUser.tokenBalance.toFixed(1) : "-"}
+                            </span>
+                        </div>
                     </div>
                     <div
                         key={`cost-${metricFlashToken}`}
                         className={`metric-card${balanceAlert ? " metric-card-alert" : ""}`}
                     >
-                        <span className="metric-label">Model cost</span>
-                        <span className="metric-value">
-                            {currentModel ? currentModel.tokenCost.toFixed(1) : "-"}
-                        </span>
+                        <svg className="metric-icon metric-icon-cost" viewBox="0 0 24 24" aria-hidden="true">
+                            <rect x="3" y="6" width="18" height="12" rx="2" />
+                            <circle cx="12" cy="12" r="3" />
+                            <path d="M6 9v.01" />
+                            <path d="M18 15v.01" />
+                            <path d="M8 3h8" />
+                            <path d="M6 21h12" />
+                        </svg>
+                        <div>
+                            <span className="metric-label">Model cost</span>
+                            <span className="metric-value">
+                                {currentModel ? currentModel.tokenCost.toFixed(1) : "-"}
+                            </span>
+                        </div>
                     </div>
                 </section>
 
-                <section className="control-section">
+                <section className="control-section prompt-section">
                     <label className="field-label" htmlFor="prompt-input">
                         Prompt
                     </label>
@@ -155,7 +182,11 @@ const TaskComposer = ({
                         !prompt.trim()
                     }
                 >
-                    {submitLoading ? "Submitting..." : "Submit"}
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="m22 2-7 20-4-9-9-4 20-7Z" />
+                        <path d="M22 2 11 13" />
+                    </svg>
+                    <span>{submitLoading ? "Submitting..." : "Submit"}</span>
                 </button>
             </form>
         </SectionCard>

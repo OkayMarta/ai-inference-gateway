@@ -16,6 +16,23 @@ const countTasksByStatus = (tasks, status) => {
     return tasks.filter((task) => task.status === status).length;
 };
 
+const getInitials = (nameOrEmail = "") => {
+    const normalized = nameOrEmail.trim();
+    if (!normalized) {
+        return "AI";
+    }
+
+    const nameParts = normalized
+        .replace(/@.*$/, "")
+        .split(/[\s._-]+/)
+        .filter(Boolean);
+
+    return nameParts
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase())
+        .join("");
+};
+
 const sameUserSnapshot = (left, right) => {
     if (!left || !right) {
         return false;
@@ -626,74 +643,100 @@ const Dashboard = () => {
 
     if (bootLoading) {
         return (
-            <div className="dashboard-layout">
-                <SectionCard as="aside" className="control-panel">
-                    <EmptyState
-                        title="Loading dashboard"
-                        description="Initial data is being loaded."
-                    />
-                </SectionCard>
-                <SectionCard className="task-panel">
-                    <EmptyState
-                        title="Loading tasks"
-                        description="Task history is being prepared."
-                    />
-                </SectionCard>
+            <div className="dashboard-page">
+                <div className="dashboard-glow dashboard-glow-primary" aria-hidden="true" />
+                <div className="dashboard-glow dashboard-glow-secondary" aria-hidden="true" />
+
+                <div className="dashboard-stack">
+                    <div className="dashboard-layout dashboard-layout-loading">
+                        <SectionCard as="aside" className="control-panel">
+                            <EmptyState
+                                title="Loading dashboard"
+                                description="Initial data is being loaded."
+                            />
+                        </SectionCard>
+                        <SectionCard className="task-panel">
+                            <EmptyState
+                                title="Loading tasks"
+                                description="Task history is being prepared."
+                            />
+                        </SectionCard>
+                    </div>
+                </div>
             </div>
         );
     }
 
+    const displayName =
+        currentUser.username || authUser?.email || currentUser.email || "Account";
+    const displayEmail = currentUser.email || authUser?.email || "";
+    const initials = getInitials(displayName || displayEmail);
+
     return (
-        <div className="dashboard-stack">
-            <section className="session-bar">
-                <div>
-                    <span className="session-label">Signed in</span>
-                    <strong>{currentUser.username || authUser?.email || currentUser.email}</strong>
-                    <span>{currentUser.email || authUser?.email}</span>
+        <div className="dashboard-page" id="top">
+            <div className="dashboard-glow dashboard-glow-primary" aria-hidden="true" />
+            <div className="dashboard-glow dashboard-glow-secondary" aria-hidden="true" />
+
+            <div className="dashboard-stack">
+                <div className="dashboard-layout">
+                    <TaskComposer
+                        models={models}
+                        hasAvailableModels={hasAvailableModels}
+                        selectedModelId={selectedModelId}
+                        prompt={prompt}
+                        currentUser={currentUser}
+                        currentModel={currentModel}
+                        screenError={screenError}
+                        submitError={submitError}
+                        submitSuccess={submitSuccess}
+                        balanceAlert={balanceAlert}
+                        metricFlashToken={metricFlashToken}
+                        submitLoading={submitLoading}
+                        onDismissSubmitError={() => setSubmitError("")}
+                        onDismissSubmitSuccess={() => setSubmitSuccess("")}
+                        onDismissBalanceAlert={() => setBalanceAlert("")}
+                        onModelChange={handleModelChange}
+                        onPromptChange={handlePromptChange}
+                        onSubmit={handleSubmit}
+                    />
+
+                    <TaskList
+                        models={models}
+                        selectedUserId={currentUser.id}
+                        screenError={screenError}
+                        taskLoading={taskLoading}
+                        sortedTasks={sortedTasks}
+                        queuedCount={queuedCount}
+                        processingCount={processingCount}
+                        completedCount={completedCount}
+                        failedCount={failedCount}
+                        cancelledCount={cancelledCount}
+                        statusFilter={statusFilter}
+                        onStatusFilterChange={handleStatusFilterChange}
+                        onCancelTask={handleCancelTask}
+                        cancelLoadingTaskId={cancelLoadingTaskId}
+                    />
                 </div>
-                <button type="button" className="logout-button" onClick={handleLogout}>
-                    Logout
-                </button>
-            </section>
 
-            <div className="dashboard-layout">
-                <TaskComposer
-                    models={models}
-                    hasAvailableModels={hasAvailableModels}
-                    selectedModelId={selectedModelId}
-                    prompt={prompt}
-                    currentUser={currentUser}
-                    currentModel={currentModel}
-                    screenError={screenError}
-                    submitError={submitError}
-                    submitSuccess={submitSuccess}
-                    balanceAlert={balanceAlert}
-                    metricFlashToken={metricFlashToken}
-                    submitLoading={submitLoading}
-                    onDismissSubmitError={() => setSubmitError("")}
-                    onDismissSubmitSuccess={() => setSubmitSuccess("")}
-                    onDismissBalanceAlert={() => setBalanceAlert("")}
-                    onModelChange={handleModelChange}
-                    onPromptChange={handlePromptChange}
-                    onSubmit={handleSubmit}
-                />
-
-                <TaskList
-                    models={models}
-                    selectedUserId={currentUser.id}
-                    screenError={screenError}
-                    taskLoading={taskLoading}
-                    sortedTasks={sortedTasks}
-                    queuedCount={queuedCount}
-                    processingCount={processingCount}
-                    completedCount={completedCount}
-                    failedCount={failedCount}
-                    cancelledCount={cancelledCount}
-                    statusFilter={statusFilter}
-                    onStatusFilterChange={handleStatusFilterChange}
-                    onCancelTask={handleCancelTask}
-                    cancelLoadingTaskId={cancelLoadingTaskId}
-                />
+                <section className="session-bar">
+                    <div className="session-profile">
+                        <span className="session-avatar" aria-hidden="true">
+                            {initials}
+                        </span>
+                        <div className="session-copy">
+                            <strong>{displayName}</strong>
+                            <span>{displayEmail}</span>
+                        </div>
+                    </div>
+                    <button type="button" className="logout-button" onClick={handleLogout}>
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M10 17l5-5-5-5" />
+                            <path d="M15 12H3" />
+                            <path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5" />
+                        </svg>
+                        <span>Logout</span>
+                    </button>
+                </section>
             </div>
         </div>
     );
