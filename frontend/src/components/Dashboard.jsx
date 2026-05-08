@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import logoMark from "../assets/logo.png";
 import AuthForm from "./AuthForm";
@@ -143,9 +143,9 @@ const renderLandingFeatureIcon = (icon) => {
     if (icon === "history") {
         return (
             <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M3.5 12a8.5 8.5 0 1 0 2.3-5.8" />
-                <path d="M3.5 6.5v5h5" />
-                <path d="M12 7v5l3.5 2.2" />
+                <circle cx="12" cy="12" r="8.5" />
+                <path d="M12 7.5V12" />
+                <path d="m12 12 3.5 2.1" />
             </svg>
         );
     }
@@ -173,6 +173,7 @@ const Dashboard = () => {
     });
     const [landingStarted, setLandingStarted] = useState(false);
     const [landingNavHidden, setLandingNavHidden] = useState(false);
+    const landingPageRef = useRef(null);
     const [authUser, setAuthUser] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
     const [models, setModels] = useState([]);
@@ -537,6 +538,19 @@ const Dashboard = () => {
         setLandingNavHidden(event.currentTarget.scrollTop > 24);
     };
 
+    const handleLandingBrandClick = (event) => {
+        event.preventDefault();
+        setLandingNavHidden(false);
+        landingPageRef.current?.scrollTo({ top: 0, behavior: "auto" });
+        window.history.replaceState({}, "", window.location.pathname);
+    };
+
+    const handleBackToLanding = () => {
+        setLandingNavHidden(false);
+        setLandingStarted(false);
+        window.history.replaceState({}, "", window.location.pathname);
+    };
+
     const handleSubmit = async (event) => {
         event.preventDefault();
         if (!selectedModelId || !prompt.trim()) {
@@ -637,12 +651,21 @@ const Dashboard = () => {
 
     if (!landingStarted && !api.getToken()) {
         return (
-            <div className="landing-page" onScroll={handleLandingScroll}>
+            <div
+                className="landing-page"
+                onScroll={handleLandingScroll}
+                ref={landingPageRef}
+            >
                 <header
                     className={`landing-nav${landingNavHidden ? " landing-nav-hidden" : ""}`}
                     aria-label="Primary navigation"
                 >
-                    <a className="landing-brand" href="#top" aria-label="AI Inference Gateway">
+                    <a
+                        className="landing-brand"
+                        href="#top"
+                        onClick={handleLandingBrandClick}
+                        aria-label="AI Inference Gateway"
+                    >
                         <img src={logoMark} alt="" className="landing-logo" />
                         <span>AI Inference Gateway</span>
                     </a>
@@ -946,7 +969,7 @@ const Dashboard = () => {
                 onRegister={handleRegister}
                 onForgotPassword={handleForgotPassword}
                 onResetPassword={handleResetPassword}
-                onBackToLanding={() => setLandingStarted(false)}
+                onBackToLanding={handleBackToLanding}
                 loading={authLoading}
                 error={authError}
                 success={authSuccess}
