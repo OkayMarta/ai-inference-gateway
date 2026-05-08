@@ -129,12 +129,11 @@ const TaskComposer = ({
                         className={`metric-card${balanceAlert ? " metric-card-alert" : ""}`}
                     >
                         <svg className="metric-icon metric-icon-cost" viewBox="0 0 24 24" aria-hidden="true">
-                            <rect x="3" y="6" width="18" height="12" rx="2" />
-                            <circle cx="12" cy="12" r="3" />
-                            <path d="M6 9v.01" />
-                            <path d="M18 15v.01" />
-                            <path d="M8 3h8" />
-                            <path d="M6 21h12" />
+                            <ellipse cx="12" cy="6" rx="7" ry="3" />
+                            <path d="M5 6v4c0 1.7 3.1 3 7 3s7-1.3 7-3V6" />
+                            <path d="M5 10v4c0 1.7 3.1 3 7 3s7-1.3 7-3v-4" />
+                            <path d="M5 14v4c0 1.7 3.1 3 7 3s7-1.3 7-3v-4" />
+                            <path d="M9 6h6" />
                         </svg>
                         <div>
                             <span className="metric-label">Model cost</span>

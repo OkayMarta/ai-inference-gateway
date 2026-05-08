@@ -60,6 +60,7 @@ const Dashboard = () => {
     const [selectedModelId, setSelectedModelId] = useState("");
     const [prompt, setPrompt] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const [authLoading, setAuthLoading] = useState(Boolean(api.getToken()));
     const [authError, setAuthError] = useState("");
@@ -301,6 +302,22 @@ const Dashboard = () => {
 
         return () => window.clearTimeout(timeoutId);
     }, [balanceAlert]);
+
+    useEffect(() => {
+        if (!mobileMenuOpen) {
+            return undefined;
+        }
+
+        const handleKeyDown = (event) => {
+            if (event.key === "Escape") {
+                setMobileMenuOpen(false);
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [mobileMenuOpen]);
 
     const completeAuth = async (authAction) => {
         setAuthLoading(true);
@@ -671,34 +688,135 @@ const Dashboard = () => {
         currentUser.username || authUser?.email || currentUser.email || "Account";
     const displayEmail = currentUser.email || authUser?.email || "";
     const initials = getInitials(displayName || displayEmail);
+    const sidebarId = "dashboard-sidebar";
+
+    const renderSessionControls = () => (
+        <>
+            <div className="session-profile">
+                <span className="session-avatar" aria-hidden="true">
+                    {initials}
+                </span>
+                <div className="session-copy">
+                    <strong>{displayName}</strong>
+                    <span>{displayEmail}</span>
+                </div>
+            </div>
+            <button type="button" className="logout-button" onClick={handleLogout}>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M10 17l5-5-5-5" />
+                    <path d="M15 12H3" />
+                    <path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5" />
+                </svg>
+                <span>Logout</span>
+            </button>
+        </>
+    );
+
+    const renderSessionBar = (className) => (
+        <section className={className}>
+            {renderSessionControls()}
+        </section>
+    );
+
+    const renderDesktopSessionBar = () => (
+        <section className="session-bar session-bar-desktop">
+            <div className="session-brand" aria-label="AI Inference Gateway">
+                <img src={logoMark} alt="" className="dashboard-logo" />
+                <span>AI Inference Gateway</span>
+            </div>
+            <div className="session-actions">
+                {renderSessionControls()}
+            </div>
+        </section>
+    );
 
     return (
-        <div className="dashboard-page" id="top">
+        <div
+            className={`dashboard-page${mobileMenuOpen ? " dashboard-menu-open" : ""}`}
+            id="top"
+        >
             <div className="dashboard-glow dashboard-glow-primary" aria-hidden="true" />
             <div className="dashboard-glow dashboard-glow-secondary" aria-hidden="true" />
 
             <div className="dashboard-stack">
+                <header className="dashboard-mobile-bar">
+                    <button
+                        type="button"
+                        className="dashboard-menu-button"
+                        onClick={() => setMobileMenuOpen(true)}
+                        aria-label="Open dashboard menu"
+                        aria-controls={sidebarId}
+                        aria-expanded={mobileMenuOpen}
+                    >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M4 7h16" />
+                            <path d="M4 12h16" />
+                            <path d="M4 17h16" />
+                        </svg>
+                    </button>
+                    <a className="dashboard-mobile-brand" href="#top" aria-label="AI Inference Gateway">
+                        <img src={logoMark} alt="" className="dashboard-logo" />
+                        <span>AI Inference Gateway</span>
+                    </a>
+                </header>
+
+                <button
+                    type="button"
+                    className="dashboard-drawer-backdrop"
+                    onClick={() => setMobileMenuOpen(false)}
+                    aria-label="Close dashboard menu"
+                    tabIndex={mobileMenuOpen ? 0 : -1}
+                />
+
+                {renderDesktopSessionBar()}
+
                 <div className="dashboard-layout">
-                    <TaskComposer
-                        models={models}
-                        hasAvailableModels={hasAvailableModels}
-                        selectedModelId={selectedModelId}
-                        prompt={prompt}
-                        currentUser={currentUser}
-                        currentModel={currentModel}
-                        screenError={screenError}
-                        submitError={submitError}
-                        submitSuccess={submitSuccess}
-                        balanceAlert={balanceAlert}
-                        metricFlashToken={metricFlashToken}
-                        submitLoading={submitLoading}
-                        onDismissSubmitError={() => setSubmitError("")}
-                        onDismissSubmitSuccess={() => setSubmitSuccess("")}
-                        onDismissBalanceAlert={() => setBalanceAlert("")}
-                        onModelChange={handleModelChange}
-                        onPromptChange={handlePromptChange}
-                        onSubmit={handleSubmit}
-                    />
+                    <div className="dashboard-sidebar" id={sidebarId}>
+                        <div className="dashboard-drawer-header">
+                            <a
+                                className="dashboard-drawer-brand"
+                                href="#top"
+                                aria-label="AI Inference Gateway"
+                            >
+                                <img src={logoMark} alt="" className="dashboard-logo" />
+                                <span>AI Inference Gateway</span>
+                            </a>
+                            <button
+                                type="button"
+                                className="dashboard-drawer-close"
+                                onClick={() => setMobileMenuOpen(false)}
+                                aria-label="Close dashboard menu"
+                            >
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M18 6 6 18" />
+                                    <path d="M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <TaskComposer
+                            models={models}
+                            hasAvailableModels={hasAvailableModels}
+                            selectedModelId={selectedModelId}
+                            prompt={prompt}
+                            currentUser={currentUser}
+                            currentModel={currentModel}
+                            screenError={screenError}
+                            submitError={submitError}
+                            submitSuccess={submitSuccess}
+                            balanceAlert={balanceAlert}
+                            metricFlashToken={metricFlashToken}
+                            submitLoading={submitLoading}
+                            onDismissSubmitError={() => setSubmitError("")}
+                            onDismissSubmitSuccess={() => setSubmitSuccess("")}
+                            onDismissBalanceAlert={() => setBalanceAlert("")}
+                            onModelChange={handleModelChange}
+                            onPromptChange={handlePromptChange}
+                            onSubmit={handleSubmit}
+                        />
+
+                        {renderSessionBar("session-bar session-bar-drawer")}
+                    </div>
 
                     <TaskList
                         models={models}
@@ -717,26 +835,6 @@ const Dashboard = () => {
                         cancelLoadingTaskId={cancelLoadingTaskId}
                     />
                 </div>
-
-                <section className="session-bar">
-                    <div className="session-profile">
-                        <span className="session-avatar" aria-hidden="true">
-                            {initials}
-                        </span>
-                        <div className="session-copy">
-                            <strong>{displayName}</strong>
-                            <span>{displayEmail}</span>
-                        </div>
-                    </div>
-                    <button type="button" className="logout-button" onClick={handleLogout}>
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M10 17l5-5-5-5" />
-                            <path d="M15 12H3" />
-                            <path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5" />
-                        </svg>
-                        <span>Logout</span>
-                    </button>
-                </section>
             </div>
         </div>
     );
