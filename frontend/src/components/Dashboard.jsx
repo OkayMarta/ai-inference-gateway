@@ -12,7 +12,6 @@ import useDashboardData from "../hooks/useDashboardData";
 import useMobileDrawer from "../hooks/useMobileDrawer";
 import useTasksPolling from "../hooks/useTasksPolling";
 import { getInitials } from "../utils/userUtils";
-import "../styles/components/Dashboard.css";
 
 const Dashboard = () => {
     const {

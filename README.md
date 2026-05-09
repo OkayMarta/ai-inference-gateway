@@ -501,7 +501,7 @@ React-компоненти інтерфейсу.
 
 CSS-стилі компонентів.
 
-##### `frontend/src/styles/components/Dashboard.css`
+##### `frontend/src/styles/app.css`
 
 Основні стилі dashboard:
 
