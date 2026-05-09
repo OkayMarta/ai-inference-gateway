@@ -58,6 +58,10 @@ func mapErrorToStatus(err error) int {
 		return http.StatusBadRequest
 	case errors.Is(err, services.ErrInvalidTaskUpdate):
 		return http.StatusBadRequest
+	case errors.Is(err, services.ErrInvalidLoginInput):
+		return http.StatusBadRequest
+	case errors.Is(err, services.ErrAccountNotFound):
+		return http.StatusNotFound
 	case errors.Is(err, services.ErrInvalidCredentials):
 		return http.StatusUnauthorized
 	case errors.Is(err, services.ErrUnauthorized):
@@ -67,6 +71,12 @@ func mapErrorToStatus(err error) int {
 	case errors.Is(err, services.ErrEmailAlreadyExists):
 		return http.StatusConflict
 	case errors.Is(err, services.ErrInvalidRegisterInput):
+		return http.StatusBadRequest
+	case errors.Is(err, services.ErrUsernameRequired):
+		return http.StatusBadRequest
+	case errors.Is(err, services.ErrInvalidEmail):
+		return http.StatusBadRequest
+	case errors.Is(err, services.ErrWeakPassword):
 		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError

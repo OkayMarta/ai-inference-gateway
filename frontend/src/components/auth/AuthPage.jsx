@@ -3,12 +3,22 @@ import logoMark from "../../assets/logo.png";
 import AuthTabs from "./AuthTabs";
 import PasswordInput from "./PasswordInput";
 
+const PASSWORD_REQUIREMENTS_MESSAGE =
+    "Use 8+ characters with a letter and a number.";
+
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+const isStrongPassword = (password) => {
+    return password.length >= 8 && /[A-Za-z]/.test(password) && /\d/.test(password);
+};
+
 const AuthPage = ({
     onLogin,
     onRegister,
     onForgotPassword,
     onResetPassword,
     onBackToLanding,
+    onClearMessages,
     loading,
     error,
     success,
@@ -19,6 +29,7 @@ const AuthPage = ({
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+    const [validationError, setValidationError] = useState("");
 
     const isRegister = mode === "register";
     const isForgot = mode === "forgot";
@@ -34,8 +45,38 @@ const AuthPage = ({
 
     const handleSubmit = (event) => {
         event.preventDefault();
+        setValidationError("");
+
+        const trimmedEmail = email.trim();
+        const trimmedUsername = username.trim();
+
+        if (isRegister && !trimmedUsername) {
+            setValidationError("Username is required.");
+            return;
+        }
+
+        if (!isReset && !trimmedEmail) {
+            setValidationError("Enter your email address.");
+            return;
+        }
+
+        if (!isReset && !isValidEmail(trimmedEmail)) {
+            setValidationError("Enter a valid email address.");
+            return;
+        }
+
         if (isForgot) {
-            onForgotPassword({ email: email.trim() });
+            onForgotPassword({ email: trimmedEmail });
+            return;
+        }
+
+        if (!password) {
+            setValidationError("Enter your password.");
+            return;
+        }
+
+        if ((isRegister || isReset) && !isStrongPassword(password)) {
+            setValidationError(PASSWORD_REQUIREMENTS_MESSAGE);
             return;
         }
 
@@ -46,15 +87,15 @@ const AuthPage = ({
 
         if (isRegister) {
             onRegister({
-                username: username.trim(),
-                email: email.trim(),
+                username: trimmedUsername,
+                email: trimmedEmail,
                 password,
             });
             return;
         }
 
         onLogin({
-            email: email.trim(),
+            email: trimmedEmail,
             password,
         });
     };
@@ -63,6 +104,12 @@ const AuthPage = ({
         setMode(nextMode);
         setPassword("");
         setShowPassword(false);
+        setValidationError("");
+        onClearMessages?.();
+    };
+
+    const clearValidationError = () => {
+        setValidationError("");
     };
 
     const title = isForgot
@@ -79,6 +126,8 @@ const AuthPage = ({
         : isRegister
           ? "Create a strong password"
           : "Enter your password";
+    const formError = validationError || error;
+    const authCardClassName = `auth-card auth-card-${mode}`;
 
     return (
         <section className="auth-shell" aria-label="Authentication">
@@ -95,7 +144,7 @@ const AuthPage = ({
                 <span>AI Inference Gateway</span>
             </button>
 
-            <div className="auth-card">
+            <div className={authCardClassName}>
                 {isForgot || isReset ? (
                     <div className="auth-mode-heading">
                         <h2>{title}</h2>
@@ -104,7 +153,7 @@ const AuthPage = ({
                     <AuthTabs isRegister={isRegister} onSwitchMode={switchMode} />
                 )}
 
-                <form className="auth-form" onSubmit={handleSubmit}>
+                <form className="auth-form" onSubmit={handleSubmit} noValidate>
                     {isRegister && (
                         <label className="auth-field">
                             <span className="field-label">Username</span>
@@ -112,7 +161,10 @@ const AuthPage = ({
                                 className="field-input"
                                 placeholder="Choose a username"
                                 value={username}
-                                onChange={(event) => setUsername(event.target.value)}
+                                onChange={(event) => {
+                                    setUsername(event.target.value);
+                                    clearValidationError();
+                                }}
                                 autoComplete="username"
                                 required
                             />
@@ -121,9 +173,9 @@ const AuthPage = ({
 
                     {!isReset && (
                         <label className="auth-field">
-                        <span className="field-label">Email</span>
-                        <input
-                            className="field-input"
+                            <span className="field-label">Email</span>
+                            <input
+                                className="field-input"
                                 type="email"
                                 placeholder={
                                     isForgot
@@ -132,32 +184,39 @@ const AuthPage = ({
                                           ? "you@example.com"
                                           : "Enter your email"
                                 }
-                            value={email}
-                            onChange={(event) => setEmail(event.target.value)}
-                            autoComplete="email"
-                            required
-                        />
-                    </label>
+                                value={email}
+                                onChange={(event) => {
+                                    setEmail(event.target.value);
+                                    clearValidationError();
+                                }}
+                                autoComplete="email"
+                                required
+                            />
+                        </label>
                     )}
 
                     {!isForgot && (
                         <label className="auth-field">
                             <span className="field-label">{passwordLabel}</span>
-                        <PasswordInput
-                            autoComplete={
-                                isRegister || isReset
-                                    ? "new-password"
-                                    : "current-password"
-                            }
-                            placeholder={passwordPlaceholder}
-                            value={password}
-                            onChange={(event) => setPassword(event.target.value)}
-                            showPassword={showPassword}
-                            onToggleVisibility={() =>
-                                setShowPassword((value) => !value)
-                            }
-                        />
-                    </label>
+                            <PasswordInput
+                                autoComplete={
+                                    isRegister || isReset
+                                        ? "new-password"
+                                        : "current-password"
+                                }
+                                placeholder={passwordPlaceholder}
+                                value={password}
+                                onChange={(event) => {
+                                    setPassword(event.target.value);
+                                    clearValidationError();
+                                }}
+                                showPassword={showPassword}
+                                onToggleVisibility={() =>
+                                    setShowPassword((value) => !value)
+                                }
+                                minLength={isRegister || isReset ? 8 : undefined}
+                            />
+                        </label>
                     )}
 
                     {!isRegister && !isForgot && !isReset && (
@@ -170,7 +229,7 @@ const AuthPage = ({
                         </button>
                     )}
 
-                    {error && <div className="notice notice-error">{error}</div>}
+                    {formError && <div className="notice notice-error">{formError}</div>}
                     {success && <div className="notice notice-success">{success}</div>}
 
                     <button type="submit" className="submit-button" disabled={loading}>

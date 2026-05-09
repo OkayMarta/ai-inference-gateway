@@ -1,8 +1,8 @@
 .auth-shell {
     position: relative;
     display: grid;
-    min-height: 100vh;
-    min-height: 100svh;
+    height: 100vh;
+    height: 100svh;
     padding: 24px;
     place-items: center;
     overflow: hidden;
@@ -92,7 +92,9 @@
 .auth-card {
     position: relative;
     z-index: 1;
+    box-sizing: border-box;
     width: min(100%, 560px);
+    max-height: calc(100svh - 48px);
     padding: 38px 40px 36px;
     border: 1px solid rgba(126, 87, 255, 0.72);
     border-radius: 24px;
@@ -103,6 +105,35 @@
         inset 0 1px 0 rgba(255, 255, 255, 0.06),
         0 28px 90px rgba(2, 6, 23, 0.38);
     backdrop-filter: blur(16px);
+}
+
+.auth-card-register {
+    padding: 30px 36px 28px;
+}
+
+.auth-card-register .auth-tabs {
+    margin-bottom: 18px;
+}
+
+.auth-card-register .auth-tab {
+    min-height: 46px;
+}
+
+.auth-card-register .auth-form {
+    gap: 14px;
+}
+
+.auth-card-register .auth-field {
+    gap: 8px;
+}
+
+.auth-shell .auth-card-register .field-input,
+.auth-shell .auth-card-register .submit-button {
+    min-height: 54px;
+}
+
+.auth-shell .auth-card-register .submit-button {
+    margin-top: 6px;
 }
 
 .auth-tabs {
@@ -285,7 +316,20 @@
 
     .auth-card {
         width: min(100%, 500px);
+        max-height: calc(100svh - 40px);
         padding: 28px 30px;
+    }
+
+    .auth-card-register {
+        padding: 22px 26px;
+    }
+
+    .auth-card-register .auth-tabs {
+        margin-bottom: 14px;
+    }
+
+    .auth-card-register .auth-form {
+        gap: 11px;
     }
 
     .auth-tabs {
@@ -324,8 +368,34 @@
     .auth-card {
         width: 100%;
         max-width: 390px;
+        max-height: calc(100svh - 32px);
         padding: 18px 16px;
         border-radius: 18px;
+    }
+
+    .auth-card-register {
+        padding: 14px;
+    }
+
+    .auth-card-register .auth-tabs {
+        margin-bottom: 10px;
+    }
+
+    .auth-card-register .auth-tab {
+        min-height: 38px;
+    }
+
+    .auth-card-register .auth-form {
+        gap: 7px;
+    }
+
+    .auth-card-register .auth-field {
+        gap: 4px;
+    }
+
+    .auth-shell .auth-card-register .field-input,
+    .auth-shell .auth-card-register .submit-button {
+        min-height: 40px;
     }
 
     .auth-tabs {
@@ -340,7 +410,7 @@
     }
 
     .auth-form {
-        gap: 11px;
+        gap: 10px;
     }
 
     .auth-field {
@@ -368,6 +438,12 @@
         font-size: 1rem;
     }
 
+    .auth-shell .notice {
+        padding: 9px 11px;
+        font-size: 0.84rem;
+        line-height: 1.35;
+    }
+
     .password-input {
         padding-right: 44px;
     }
@@ -388,6 +464,10 @@
         padding: 14px;
     }
 
+    .auth-card-register {
+        padding: 10px 12px;
+    }
+
     .auth-tabs {
         margin-bottom: 12px;
     }
@@ -397,7 +477,11 @@
     }
 
     .auth-form {
-        gap: 8px;
+        gap: 7px;
+    }
+
+    .auth-card-register .auth-form {
+        gap: 6px;
     }
 
     .auth-field {
@@ -406,7 +490,7 @@
 
     .auth-shell .field-input,
     .auth-shell .submit-button {
-        min-height: 42px;
+        min-height: 40px;
     }
 
     .auth-shell .field-input {
@@ -416,5 +500,10 @@
 
     .auth-shell .submit-button {
         margin-top: 4px;
+    }
+
+    .auth-shell .notice {
+        padding: 8px 10px;
+        font-size: 0.82rem;
     }
 }

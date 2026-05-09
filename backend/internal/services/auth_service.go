@@ -4,6 +4,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode"
 
 	"ai-inference-gateway/internal/models"
 
@@ -36,7 +37,7 @@ func (s *AuthService) Register(username, email, password string) (*models.User, 
 	email = strings.TrimSpace(email)
 
 	if err := validateAuthInput(username, email, password); err != nil {
-		return nil, "", ErrInvalidRegisterInput
+		return nil, "", err
 	}
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -71,13 +72,13 @@ func (s *AuthService) Register(username, email, password string) (*models.User, 
 func (s *AuthService) Login(email, password string) (*models.User, string, error) {
 	email = strings.TrimSpace(email)
 	if email == "" || !strings.Contains(email, "@") || password == "" {
-		return nil, "", ErrInvalidCredentials
+		return nil, "", ErrInvalidLoginInput
 	}
 
 	user, err := s.userRepo.GetByEmail(email)
 	if err != nil {
 		if isRepoNotFoundError(err, "user not found:") {
-			return nil, "", ErrInvalidCredentials
+			return nil, "", ErrAccountNotFound
 		}
 		return nil, "", err
 	}
@@ -143,13 +144,36 @@ func (s *AuthService) ValidateToken(tokenValue string) (*AuthClaims, error) {
 
 func validateAuthInput(username, email, password string) error {
 	if username == "" {
-		return ErrInvalidAuthInput
+		return ErrUsernameRequired
 	}
 	if email == "" || !strings.Contains(email, "@") {
-		return ErrInvalidAuthInput
+		return ErrInvalidEmail
 	}
-	if len(password) < 6 {
-		return ErrInvalidAuthInput
+	if err := validatePassword(password); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validatePassword(password string) error {
+	if len(password) < 8 {
+		return ErrWeakPassword
+	}
+
+	hasLetter := false
+	hasDigit := false
+	for _, char := range password {
+		if unicode.IsLetter(char) {
+			hasLetter = true
+		}
+		if unicode.IsDigit(char) {
+			hasDigit = true
+		}
+	}
+
+	if !hasLetter || !hasDigit {
+		return ErrWeakPassword
 	}
 
 	return nil

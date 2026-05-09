@@ -5,6 +5,7 @@ const PasswordInput = ({
     placeholder,
     showPassword,
     value,
+    minLength,
 }) => (
     <span className="password-input-wrap">
         <input
@@ -14,7 +15,7 @@ const PasswordInput = ({
             value={value}
             onChange={onChange}
             autoComplete={autoComplete}
-            minLength={6}
+            minLength={minLength}
             required
         />
         <button

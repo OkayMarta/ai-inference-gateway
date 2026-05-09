@@ -155,12 +155,18 @@ const useAuth = () => {
         window.history.replaceState({}, "", window.location.pathname);
     }, []);
 
+    const clearAuthMessages = useCallback(() => {
+        setAuthError("");
+        setAuthSuccess("");
+    }, []);
+
     return {
         authError,
         authLoading,
         authSuccess,
         authUser,
         backToLanding,
+        clearAuthMessages,
         currentUser,
         forgotPassword,
         hasAuthToken: Boolean(api.getToken()),

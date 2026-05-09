@@ -20,6 +20,7 @@ const Dashboard = () => {
         authSuccess,
         authUser,
         backToLanding,
+        clearAuthMessages,
         currentUser,
         forgotPassword,
         hasAuthToken,
@@ -123,6 +124,7 @@ const Dashboard = () => {
                 loading={authLoading}
                 error={authError}
                 success={authSuccess}
+                onClearMessages={clearAuthMessages}
                 resetToken={passwordResetToken}
             />
         );
