@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -44,12 +45,14 @@ func (h *TaskHandler) Submit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.ModelID == "" || req.Payload == "" {
+	modelID := strings.TrimSpace(req.ModelID)
+	payload := strings.TrimSpace(req.Payload)
+	if modelID == "" || payload == "" {
 		respondError(w, r, http.StatusBadRequest, "modelId and payload are required")
 		return
 	}
 
-	task, err := h.inference.SubmitPrompt(userID, req.ModelID, req.Payload)
+	task, err := h.inference.SubmitPrompt(userID, modelID, payload)
 	if err != nil {
 		respondServiceError(w, r, err)
 		return
