@@ -131,17 +131,7 @@ func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := chi.URLParam(r, "id")
-	task, err := h.inference.GetTaskByID(id)
-	if err != nil {
-		respondServiceError(w, r, err)
-		return
-	}
-	if !canAccessTask(userID, role, task) {
-		respondError(w, r, http.StatusForbidden, services.ErrForbidden.Error())
-		return
-	}
-
-	cancelledTask, err := h.inference.CancelTask(id)
+	cancelledTask, err := h.inference.CancelTask(id, userID, role)
 	if err != nil {
 		respondServiceError(w, r, err)
 		return

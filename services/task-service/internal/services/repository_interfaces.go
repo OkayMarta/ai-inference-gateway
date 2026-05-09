@@ -26,6 +26,7 @@ type ModelRepository interface {
 type TaskRepository interface {
 	GetByID(id string) (*models.PromptTask, error)
 	GetByIDTx(tx appdb.DBTX, id string) (*models.PromptTask, error)
+	GetByIDForUpdateTx(tx appdb.DBTX, id string) (*models.PromptTask, error)
 	List(filter TaskListFilter) ([]*models.PromptTask, error)
 	Create(task *models.PromptTask) error
 	CreateTx(tx appdb.DBTX, task *models.PromptTask) error

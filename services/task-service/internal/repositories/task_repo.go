@@ -30,6 +30,39 @@ func (r *TaskRepository) GetByIDTx(tx appdb.DBTX, id string) (*models.PromptTask
 	return r.getByID(tx, id)
 }
 
+func (r *TaskRepository) GetByIDForUpdateTx(tx appdb.DBTX, id string) (*models.PromptTask, error) {
+	task := &models.PromptTask{}
+	var result sql.NullString
+
+	err := tx.QueryRow(`
+		SELECT id, user_id, model_id, payload, status, result, created_at
+		FROM prompt_tasks
+		WHERE id = $1
+		FOR UPDATE
+	`, id).Scan(
+		&task.ID,
+		&task.UserID,
+		&task.ModelID,
+		&task.Payload,
+		&task.Status,
+		&result,
+		&task.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("task not found: %s", id)
+		}
+		return nil, fmt.Errorf("get task by id for update %s: %w", id, err)
+	}
+
+	task.CreatedAt = task.CreatedAt.UTC()
+	if result.Valid {
+		task.Result = result.String
+	}
+
+	return task, nil
+}
+
 func (r *TaskRepository) getByID(exec appdb.DBTX, id string) (*models.PromptTask, error) {
 	task := &models.PromptTask{}
 	var result sql.NullString

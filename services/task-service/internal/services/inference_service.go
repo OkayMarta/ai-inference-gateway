@@ -140,18 +140,34 @@ func (s *InferenceService) UpdateTaskPayload(id string, payload string) (*models
 	return task, nil
 }
 
-func (s *InferenceService) CancelTask(id string) (*models.PromptTask, error) {
-	task, err := s.GetTaskByID(id)
+func (s *InferenceService) CancelTask(id, userID, role string) (*models.PromptTask, error) {
+	tx, err := s.db.BeginTx(context.Background(), nil)
 	if err != nil {
+		return nil, fmt.Errorf("%w: begin cancellation transaction: %v", ErrTaskCancellationFailed, err)
+	}
+
+	task, err := s.taskRepo.GetByIDForUpdateTx(tx, id)
+	if err != nil {
+		_ = tx.Rollback()
+		if isRepoNotFoundError(err, "task not found:") {
+			return nil, ErrTaskNotFound
+		}
 		return nil, err
 	}
 
+	if role != "admin" && task.UserID != userID {
+		_ = tx.Rollback()
+		return nil, ErrForbidden
+	}
+
 	if task.Status != models.StatusQueued {
+		_ = tx.Rollback()
 		return nil, ErrTaskCannotBeDeleted
 	}
 
-	model, err := s.modelRepo.GetByID(task.ModelID)
+	model, err := s.modelRepo.GetByIDTx(tx, task.ModelID)
 	if err != nil {
+		_ = tx.Rollback()
 		if isRepoNotFoundError(err, "model not found:") {
 			return nil, ErrModelNotFound
 		}
@@ -159,13 +175,19 @@ func (s *InferenceService) CancelTask(id string) (*models.PromptTask, error) {
 	}
 
 	if err := s.billing.Refund(task.UserID, task.ID, model.TokenCost); err != nil {
+		_ = tx.Rollback()
 		return nil, mapBillingError(err, ErrBillingUnavailable, ErrBillingRefundFailed)
 	}
 
 	task.Status = models.StatusCancelled
 	task.Result = "Task was cancelled"
-	if err := s.taskRepo.Update(task); err != nil {
+	if err := s.taskRepo.UpdateTx(tx, task); err != nil {
+		_ = tx.Rollback()
 		return nil, fmt.Errorf("%w: %v", ErrTaskCancellationFailed, err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("%w: commit cancellation transaction: %v", ErrTaskCancellationFailed, err)
 	}
 
 	return task, nil
