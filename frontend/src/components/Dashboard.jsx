@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
-import logoMark from "../assets/logo.png";
 import AuthForm from "./AuthForm";
 import EmptyState from "./EmptyState";
 import LandingPage from "./landing/LandingPage";
+import DashboardDrawer from "./layout/DashboardDrawer";
+import MobileDashboardBar from "./layout/MobileDashboardBar";
+import SessionBar from "./layout/SessionBar";
 import SectionCard from "./SectionCard";
 import TaskComposer from "./TaskComposer";
 import TaskList from "./TaskList";
@@ -536,46 +538,6 @@ const Dashboard = () => {
     const initials = getInitials(displayName || displayEmail);
     const sidebarId = "dashboard-sidebar";
 
-    const renderSessionControls = () => (
-        <>
-            <div className="session-profile">
-                <span className="session-avatar" aria-hidden="true">
-                    {initials}
-                </span>
-                <div className="session-copy">
-                    <strong>{displayName}</strong>
-                    <span>{displayEmail}</span>
-                </div>
-            </div>
-            <button type="button" className="logout-button" onClick={handleLogout}>
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M10 17l5-5-5-5" />
-                    <path d="M15 12H3" />
-                    <path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5" />
-                </svg>
-                <span>Logout</span>
-            </button>
-        </>
-    );
-
-    const renderSessionBar = (className) => (
-        <section className={className}>
-            {renderSessionControls()}
-        </section>
-    );
-
-    const renderDesktopSessionBar = () => (
-        <section className="session-bar session-bar-desktop">
-            <div className="session-brand" aria-label="AI Inference Gateway">
-                <img src={logoMark} alt="" className="dashboard-logo" />
-                <span>AI Inference Gateway</span>
-            </div>
-            <div className="session-actions">
-                {renderSessionControls()}
-            </div>
-        </section>
-    );
-
     return (
         <div
             className={`dashboard-page${mobileMenuOpen ? " dashboard-menu-open" : ""}`}
@@ -585,61 +547,25 @@ const Dashboard = () => {
             <div className="dashboard-glow dashboard-glow-secondary" aria-hidden="true" />
 
             <div className="dashboard-stack">
-                <header className="dashboard-mobile-bar">
-                    <button
-                        type="button"
-                        className="dashboard-menu-button"
-                        onClick={() => setMobileMenuOpen(true)}
-                        aria-label="Open dashboard menu"
-                        aria-controls={sidebarId}
-                        aria-expanded={mobileMenuOpen}
-                    >
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M4 7h16" />
-                            <path d="M4 12h16" />
-                            <path d="M4 17h16" />
-                        </svg>
-                    </button>
-                    <a className="dashboard-mobile-brand" href="#top" aria-label="AI Inference Gateway">
-                        <img src={logoMark} alt="" className="dashboard-logo" />
-                        <span>AI Inference Gateway</span>
-                    </a>
-                </header>
-
-                <button
-                    type="button"
-                    className="dashboard-drawer-backdrop"
-                    onClick={() => setMobileMenuOpen(false)}
-                    aria-label="Close dashboard menu"
-                    tabIndex={mobileMenuOpen ? 0 : -1}
+                <MobileDashboardBar
+                    mobileMenuOpen={mobileMenuOpen}
+                    onOpenMenu={() => setMobileMenuOpen(true)}
+                    sidebarId={sidebarId}
                 />
 
-                {renderDesktopSessionBar()}
+                <SessionBar
+                    displayEmail={displayEmail}
+                    displayName={displayName}
+                    initials={initials}
+                    onLogout={handleLogout}
+                />
 
                 <div className="dashboard-layout">
-                    <div className="dashboard-sidebar" id={sidebarId}>
-                        <div className="dashboard-drawer-header">
-                            <a
-                                className="dashboard-drawer-brand"
-                                href="#top"
-                                aria-label="AI Inference Gateway"
-                            >
-                                <img src={logoMark} alt="" className="dashboard-logo" />
-                                <span>AI Inference Gateway</span>
-                            </a>
-                            <button
-                                type="button"
-                                className="dashboard-drawer-close"
-                                onClick={() => setMobileMenuOpen(false)}
-                                aria-label="Close dashboard menu"
-                            >
-                                <svg viewBox="0 0 24 24" aria-hidden="true">
-                                    <path d="M18 6 6 18" />
-                                    <path d="M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-
+                    <DashboardDrawer
+                        mobileMenuOpen={mobileMenuOpen}
+                        onCloseMenu={() => setMobileMenuOpen(false)}
+                        sidebarId={sidebarId}
+                    >
                         <TaskComposer
                             models={models}
                             hasAvailableModels={hasAvailableModels}
@@ -661,8 +587,14 @@ const Dashboard = () => {
                             onSubmit={handleSubmit}
                         />
 
-                        {renderSessionBar("session-bar session-bar-drawer")}
-                    </div>
+                        <SessionBar
+                            displayEmail={displayEmail}
+                            displayName={displayName}
+                            initials={initials}
+                            onLogout={handleLogout}
+                            variant="drawer"
+                        />
+                    </DashboardDrawer>
 
                     <TaskList
                         models={models}
