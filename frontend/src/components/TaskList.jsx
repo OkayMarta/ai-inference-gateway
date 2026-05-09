@@ -2,33 +2,8 @@ import { useState } from "react";
 import EmptyState from "./EmptyState";
 import SectionCard from "./SectionCard";
 import StatusBadge from "./StatusBadge";
-
-const formatTimestamp = (value) => {
-    if (!value) {
-        return "-";
-    }
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-        return value;
-    }
-
-    return new Intl.DateTimeFormat("uk-UA", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-    }).format(date);
-};
-
-const getTaskResult = (task) => {
-    if (task.status === "Completed" || task.status === "Failed") {
-        return task.result || "-";
-    }
-
-    return "Task is still being processed.";
-};
+import { formatTimestamp } from "../utils/dateUtils";
+import { getTaskResult } from "../utils/taskUtils";
 
 const TaskList = ({
     models,

@@ -6,46 +6,9 @@ import EmptyState from "./EmptyState";
 import SectionCard from "./SectionCard";
 import TaskComposer from "./TaskComposer";
 import TaskList from "./TaskList";
+import { countTasksByStatus, normalizeList } from "../utils/taskUtils";
+import { getInitials, sameUserSnapshot } from "../utils/userUtils";
 import "../styles/components/Dashboard.css";
-
-const normalizeList = (value) => {
-    return Array.isArray(value) ? value : [];
-};
-
-const countTasksByStatus = (tasks, status) => {
-    return tasks.filter((task) => task.status === status).length;
-};
-
-const getInitials = (nameOrEmail = "") => {
-    const normalized = nameOrEmail.trim();
-    if (!normalized) {
-        return "AI";
-    }
-
-    const nameParts = normalized
-        .replace(/@.*$/, "")
-        .split(/[\s._-]+/)
-        .filter(Boolean);
-
-    return nameParts
-        .slice(0, 2)
-        .map((part) => part[0]?.toUpperCase())
-        .join("");
-};
-
-const sameUserSnapshot = (left, right) => {
-    if (!left || !right) {
-        return false;
-    }
-
-    return (
-        left.id === right.id &&
-        left.username === right.username &&
-        left.email === right.email &&
-        left.role === right.role &&
-        left.tokenBalance === right.tokenBalance
-    );
-};
 
 const landingFeatureItems = [
     {
