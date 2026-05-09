@@ -9,9 +9,9 @@ type TaskClient struct {
 	*ProxyClient
 }
 
-func NewTaskClient(baseURL string) *TaskClient {
+func NewTaskClient(baseURL, internalServiceToken string) *TaskClient {
 	return &TaskClient{
-		ProxyClient: newProxyClient(baseURL, "task service unavailable", &http.Client{
+		ProxyClient: newProxyClient(baseURL, "task service unavailable", internalServiceToken, &http.Client{
 			Timeout: 5 * time.Second,
 		}),
 	}

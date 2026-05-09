@@ -11,8 +11,9 @@ import (
 )
 
 type BillingClient struct {
-	baseURL string
-	client  *http.Client
+	baseURL              string
+	internalServiceToken string
+	client               *http.Client
 }
 
 type UserDTO struct {
@@ -35,10 +36,11 @@ func (e *DownstreamError) Error() string {
 	return fmt.Sprintf("billing service returned status %d", e.StatusCode)
 }
 
-func NewBillingClient(baseURL string) *BillingClient {
+func NewBillingClient(baseURL, internalServiceToken string) *BillingClient {
 	return &BillingClient{
-		baseURL: strings.TrimRight(baseURL, "/"),
-		client:  &http.Client{Timeout: 5 * time.Second},
+		baseURL:              strings.TrimRight(baseURL, "/"),
+		internalServiceToken: internalServiceToken,
+		client:               &http.Client{Timeout: 5 * time.Second},
 	}
 }
 
@@ -51,7 +53,13 @@ func (c *BillingClient) Refund(userID, taskID string, amount float64) error {
 }
 
 func (c *BillingClient) GetUser(userID string) (*UserDTO, error) {
-	resp, err := c.client.Get(c.baseURL + "/internal/users/" + url.PathEscape(userID))
+	req, err := http.NewRequest(http.MethodGet, c.baseURL+"/internal/users/"+url.PathEscape(userID), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("X-Internal-Service-Token", c.internalServiceToken)
+
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("billing service unavailable: %w", err)
 	}
@@ -79,7 +87,14 @@ func (c *BillingClient) postBillingEvent(path, userID, taskID string, amount flo
 		return err
 	}
 
-	resp, err := c.client.Post(c.baseURL+path, "application/json", bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, c.baseURL+path, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Internal-Service-Token", c.internalServiceToken)
+
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("billing service unavailable: %w", err)
 	}

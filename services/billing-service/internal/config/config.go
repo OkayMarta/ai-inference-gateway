@@ -6,8 +6,9 @@ import (
 )
 
 type Config struct {
-	Port string
-	DB   DBConfig
+	Port                 string
+	InternalServiceToken string
+	DB                   DBConfig
 }
 
 type DBConfig struct {
@@ -21,7 +22,8 @@ type DBConfig struct {
 
 func Load() Config {
 	return Config{
-		Port: envOrDefault("PORT", "8081"),
+		Port:                 envOrDefault("PORT", "8081"),
+		InternalServiceToken: envOrDefault("INTERNAL_SERVICE_TOKEN", "dev-internal-secret"),
 		DB: DBConfig{
 			Host:     envOrDefault("DB_HOST", "localhost"),
 			Port:     envOrDefault("DB_PORT", "5432"),

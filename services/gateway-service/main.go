@@ -22,8 +22,8 @@ func main() {
 	}
 
 	cfg := config.Load()
-	billingClient := clients.NewBillingClient(cfg.BillingServiceURL)
-	taskClient := clients.NewTaskClient(cfg.TaskServiceURL)
+	billingClient := clients.NewBillingClient(cfg.BillingServiceURL, cfg.InternalServiceToken)
+	taskClient := clients.NewTaskClient(cfg.TaskServiceURL, cfg.InternalServiceToken)
 	proxy := handlers.NewProxyHandler(billingClient, taskClient)
 
 	r := chi.NewRouter()

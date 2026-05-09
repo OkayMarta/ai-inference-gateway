@@ -6,10 +6,11 @@ import (
 )
 
 type Config struct {
-	Port              string
-	OllamaURL         string
-	BillingServiceURL string
-	DB                DBConfig
+	Port                 string
+	OllamaURL            string
+	BillingServiceURL    string
+	InternalServiceToken string
+	DB                   DBConfig
 }
 
 type DBConfig struct {
@@ -23,9 +24,10 @@ type DBConfig struct {
 
 func Load() Config {
 	return Config{
-		Port:              envOrDefault("PORT", "8082"),
-		OllamaURL:         envOrDefault("OLLAMA_URL", "http://localhost:11434"),
-		BillingServiceURL: envOrDefault("BILLING_SERVICE_URL", "http://localhost:8081"),
+		Port:                 envOrDefault("PORT", "8082"),
+		OllamaURL:            envOrDefault("OLLAMA_URL", "http://localhost:11434"),
+		BillingServiceURL:    envOrDefault("BILLING_SERVICE_URL", "http://localhost:8081"),
+		InternalServiceToken: envOrDefault("INTERNAL_SERVICE_TOKEN", "dev-internal-secret"),
 		DB: DBConfig{
 			Host:     envOrDefault("DB_HOST", "localhost"),
 			Port:     envOrDefault("DB_PORT", "5432"),

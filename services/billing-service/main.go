@@ -75,6 +75,7 @@ func main() {
 	})
 
 	r.Route("/internal", func(r chi.Router) {
+		r.Use(handlers.InternalServiceTokenMiddleware(cfg.InternalServiceToken))
 		r.Get("/users/{id}", userH.GetByID)
 		r.Post("/billing/charge", billingH.Charge)
 		r.Post("/billing/refund", billingH.Refund)

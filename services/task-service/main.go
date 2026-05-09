@@ -36,7 +36,7 @@ func main() {
 	workerRepo := repositories.NewWorkerRepository(postgresDB)
 
 	ollama := services.NewOllamaClient(cfg.OllamaURL)
-	billingClient := clients.NewBillingClient(cfg.BillingServiceURL)
+	billingClient := clients.NewBillingClient(cfg.BillingServiceURL, cfg.InternalServiceToken)
 
 	modelSvc := services.NewModelService(modelRepo, ollama)
 	workerSvc := services.NewWorkerService(workerRepo, taskRepo, modelRepo, ollama)
@@ -80,11 +80,15 @@ func main() {
 
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/models", modelH.GetAll)
-		r.Post("/tasks", taskH.Submit)
-		r.Get("/tasks", taskH.List)
-		r.Get("/tasks/{id}", taskH.GetByID)
-		r.Put("/tasks/{id}", taskH.UpdateTask)
-		r.Delete("/tasks/{id}", taskH.DeleteTask)
+
+		r.Group(func(r chi.Router) {
+			r.Use(handlers.InternalServiceTokenMiddleware(cfg.InternalServiceToken))
+			r.Post("/tasks", taskH.Submit)
+			r.Get("/tasks", taskH.List)
+			r.Get("/tasks/{id}", taskH.GetByID)
+			r.Put("/tasks/{id}", taskH.UpdateTask)
+			r.Delete("/tasks/{id}", taskH.DeleteTask)
+		})
 	})
 
 	addr := fmt.Sprintf(":%s", cfg.Port)

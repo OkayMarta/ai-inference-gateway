@@ -14,16 +14,18 @@ type AuthHeaders struct {
 }
 
 type ProxyClient struct {
-	baseURL            string
-	unavailableMessage string
-	client             *http.Client
+	baseURL              string
+	unavailableMessage   string
+	internalServiceToken string
+	client               *http.Client
 }
 
-func newProxyClient(baseURL, unavailableMessage string, client *http.Client) *ProxyClient {
+func newProxyClient(baseURL, unavailableMessage, internalServiceToken string, client *http.Client) *ProxyClient {
 	return &ProxyClient{
-		baseURL:            strings.TrimRight(baseURL, "/"),
-		unavailableMessage: unavailableMessage,
-		client:             client,
+		baseURL:              strings.TrimRight(baseURL, "/"),
+		unavailableMessage:   unavailableMessage,
+		internalServiceToken: internalServiceToken,
+		client:               client,
 	}
 }
 
@@ -48,6 +50,7 @@ func (c *ProxyClient) Do(r *http.Request, downstreamPath string, auth *AuthHeade
 		req.Header.Set("X-User-ID", auth.UserID)
 		req.Header.Set("X-User-Email", auth.Email)
 		req.Header.Set("X-User-Role", auth.Role)
+		req.Header.Set("X-Internal-Service-Token", c.internalServiceToken)
 	}
 
 	return c.client.Do(req)

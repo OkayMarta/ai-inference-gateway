@@ -9,9 +9,9 @@ type BillingClient struct {
 	*ProxyClient
 }
 
-func NewBillingClient(baseURL string) *BillingClient {
+func NewBillingClient(baseURL, internalServiceToken string) *BillingClient {
 	return &BillingClient{
-		ProxyClient: newProxyClient(baseURL, "billing service unavailable", &http.Client{
+		ProxyClient: newProxyClient(baseURL, "billing service unavailable", internalServiceToken, &http.Client{
 			Timeout: 5 * time.Second,
 		}),
 	}
