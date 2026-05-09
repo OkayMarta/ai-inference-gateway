@@ -1656,6 +1656,29 @@
         font-size: clamp(1rem, 2.3vw, 1.18rem);
     }
 
+    .pricing-rate-card {
+        align-items: center;
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .pricing-rate-card > div:not(.pricing-rate-icon) {
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .pricing-rate-card p {
+        align-items: center;
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .pricing-rate-card span::before {
+        display: none;
+    }
+
     .pricing-grid {
         grid-template-columns: 1fr;
         gap: 18px;
@@ -1936,7 +1959,7 @@
     }
 
     .pricing-rate-card {
-        align-items: flex-start;
+        align-items: center;
         margin-top: 20px;
     }
 
@@ -1946,7 +1969,7 @@
     }
 
     .pricing-rate-card p {
-        align-items: flex-start;
+        align-items: center;
         flex-direction: column;
         gap: 0;
         font-size: 0.94rem;
