@@ -1,0 +1,95 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ai-gateway-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ai_gateway_postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: ai-gateway-redis
+    ports:
+      - "6379:6379"
+
+  billing-service:
+    build:
+      context: ./services/billing-service
+    container_name: ai-gateway-billing-service
+    environment:
+      PORT: "8081"
+      INTERNAL_SERVICE_TOKEN: dev-internal-secret
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: billing_db
+      DB_SSLMODE: disable
+      JWT_SECRET: dev-secret
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgres
+
+  task-service:
+    build:
+      context: ./services/task-service
+    container_name: ai-gateway-task-service
+    environment:
+      PORT: "8082"
+      INTERNAL_SERVICE_TOKEN: dev-internal-secret
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: task_db
+      DB_SSLMODE: disable
+      REDIS_ADDR: redis:6379
+      REDIS_PASSWORD: ""
+      REDIS_DB: "0"
+      CACHE_TTL_SECONDS: "60"
+      BILLING_SERVICE_URL: http://billing-service:8081
+      OLLAMA_URL: http://host.docker.internal:11434
+    ports:
+      - "8082:8082"
+    depends_on:
+      - postgres
+      - redis
+      - billing-service
+
+  gateway-service:
+    build:
+      context: ./services/gateway-service
+    container_name: ai-gateway-gateway-service
+    environment:
+      PORT: "8080"
+      JWT_SECRET: dev-secret
+      INTERNAL_SERVICE_TOKEN: dev-internal-secret
+      BILLING_SERVICE_URL: http://billing-service:8081
+      TASK_SERVICE_URL: http://task-service:8082
+      FRONTEND_ORIGIN: http://localhost:5173
+    ports:
+      - "8080:8080"
+    depends_on:
+      - billing-service
+      - task-service
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: ai-gateway-frontend
+    environment:
+      VITE_API_BASE_URL: http://localhost:8080
+    ports:
+      - "5173:5173"
+    depends_on:
+      - gateway-service
+
+volumes:
+  ai_gateway_postgres_data:
+    name: ai_gateway_postgres_data
