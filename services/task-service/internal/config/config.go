@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 )
 
 type Config struct {
@@ -11,6 +12,7 @@ type Config struct {
 	BillingServiceURL    string
 	InternalServiceToken string
 	DB                   DBConfig
+	Redis                RedisConfig
 }
 
 type DBConfig struct {
@@ -20,6 +22,13 @@ type DBConfig struct {
 	Password string
 	Name     string
 	SSLMode  string
+}
+
+type RedisConfig struct {
+	Addr            string
+	Password        string
+	DB              int
+	CacheTTLSeconds int
 }
 
 func Load() Config {
@@ -35,6 +44,12 @@ func Load() Config {
 			Password: os.Getenv("DB_PASSWORD"),
 			Name:     envOrDefault("DB_NAME", "task_db"),
 			SSLMode:  envOrDefault("DB_SSLMODE", "disable"),
+		},
+		Redis: RedisConfig{
+			Addr:            envOrDefault("REDIS_ADDR", "localhost:6379"),
+			Password:        os.Getenv("REDIS_PASSWORD"),
+			DB:              envIntOrDefault("REDIS_DB", 0),
+			CacheTTLSeconds: envIntOrDefault("CACHE_TTL_SECONDS", 60),
 		},
 	}
 }
@@ -57,4 +72,18 @@ func envOrDefault(key, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func envIntOrDefault(key string, fallback int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback
+	}
+
+	return parsed
 }
