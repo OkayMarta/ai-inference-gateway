@@ -17,6 +17,17 @@ AI Inference Gateway is a full-stack web app for submitting prompts to local AI 
 - Transaction history in the billing database
 - Gateway-based API access
 
+## Technologies
+
+![Go](https://img.shields.io/badge/Go-00ADD8?logo=go&logoColor=white)
+![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=111111)
+![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-FF4438?logo=redis&logoColor=white)
+![Ollama](https://img.shields.io/badge/Ollama-000000?logo=ollama&logoColor=white)
+![JWT](https://img.shields.io/badge/JWT-000000?logo=jsonwebtokens&logoColor=white)
+
 ## Screenshots
 
 ### Landing Page
@@ -133,6 +144,27 @@ Open the app at:
 ```text
 http://localhost:5173
 ```
+
+## Running with Docker Compose
+
+```bash
+docker compose up --build
+```
+
+Services:
+
+- Frontend: http://localhost:5173
+- Gateway: http://localhost:8080
+- Billing Service: http://localhost:8081
+- Task Service: http://localhost:8082
+- PostgreSQL: localhost:5432
+- Redis: localhost:6379
+
+## Redis caching
+
+The task-service caches `GET /api/models` responses in Redis using the key `ai_models:all`.
+The first request loads data from PostgreSQL and stores it in Redis.
+The next requests are served from Redis until TTL expires or cache is invalidated after model synchronization.
 
 ## Testing and Build
 
