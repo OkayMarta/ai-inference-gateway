@@ -44,13 +44,13 @@ func (s *ModelService) GetAll() ([]*models.AIModel, error) {
 		if err == nil {
 			var items []*models.AIModel
 			if err := json.Unmarshal([]byte(cachedModels), &items); err == nil {
-				log.Println("models cache hit")
+				log.Println("models cache hit: loading from Redis")
 				return items, nil
 			}
 
 			log.Printf("models cache decode error: %v", err)
 		} else if !errors.Is(err, redis.Nil) {
-			log.Printf("models cache read error: %v", err)
+			log.Printf("models Redis cache error: %v", err)
 		}
 	}
 
@@ -69,6 +69,8 @@ func (s *ModelService) GetAll() ([]*models.AIModel, error) {
 
 		if err := s.cache.Set(ctx, allModelsCacheKey, string(payload)); err != nil {
 			log.Printf("models cache write error: %v", err)
+		} else {
+			log.Println("models cached in Redis")
 		}
 	}
 
