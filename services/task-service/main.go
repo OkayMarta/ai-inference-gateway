@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -45,6 +46,11 @@ func main() {
 		cfg.Redis.DB,
 		time.Duration(cfg.Redis.CacheTTLSeconds)*time.Second,
 	)
+	if err := modelCache.Ping(context.Background()); err != nil {
+		log.Printf("Redis unavailable: %v", err)
+	} else {
+		log.Println("Redis connected successfully")
+	}
 
 	modelSvc := services.NewModelService(modelRepo, ollama, modelCache)
 	workerSvc := services.NewWorkerService(workerRepo, taskRepo, modelRepo, ollama)
