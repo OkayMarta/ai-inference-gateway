@@ -1,7 +1,10 @@
-.env
 .git
+.env
+.env.*
 *.log
 tmp
 bin
 dist
 vendor
+coverage.out
+*.test
