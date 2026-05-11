@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from "react";
+
 import SectionCard from "./SectionCard";
 
 const TaskComposer = ({
@@ -20,8 +22,54 @@ const TaskComposer = ({
     onPromptChange,
     onSubmit,
 }) => {
+    const [isModelPickerOpen, setIsModelPickerOpen] = useState(false);
+    const modelPickerRef = useRef(null);
     const noModelsNotice =
         "No models are available. Make sure Ollama is running and has models loaded.";
+    const selectedModel = models.find((model) => model.id === selectedModelId);
+    const modelPickerLabel = selectedModel
+        ? selectedModel.name
+        : hasAvailableModels
+          ? "Select model"
+          : "No models available";
+
+    useEffect(() => {
+        if (!isModelPickerOpen) {
+            return undefined;
+        }
+
+        const handlePointerDown = (event) => {
+            if (!modelPickerRef.current?.contains(event.target)) {
+                setIsModelPickerOpen(false);
+            }
+        };
+
+        const handleKeyDown = (event) => {
+            if (event.key === "Escape") {
+                setIsModelPickerOpen(false);
+            }
+        };
+
+        document.addEventListener("pointerdown", handlePointerDown);
+        document.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            document.removeEventListener("pointerdown", handlePointerDown);
+            document.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [isModelPickerOpen]);
+
+    useEffect(() => {
+        if (!hasAvailableModels) {
+            setIsModelPickerOpen(false);
+        }
+    }, [hasAvailableModels]);
+
+    const handleModelSelect = (modelId) => {
+        onModelChange({ target: { value: modelId } });
+        setIsModelPickerOpen(false);
+    };
+
     const panelTitle = (
         <span className="panel-title-with-icon">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -84,27 +132,57 @@ const TaskComposer = ({
                 )}
 
                 <section className="control-section">
-                    <label className="field-label" htmlFor="model-select">
+                    <label className="field-label" htmlFor="model-picker-button">
                         Model
                     </label>
-                    <select
-                        id="model-select"
-                        value={selectedModelId}
-                        onChange={onModelChange}
-                        className="field-input"
-                        disabled={!hasAvailableModels}
-                    >
-                        <option value="">
-                            {hasAvailableModels
-                                ? "Select model"
-                                : "No models available"}
-                        </option>
-                        {models.map((model) => (
-                            <option key={model.id} value={model.id}>
-                                {model.name}
-                            </option>
-                        ))}
-                    </select>
+                    <div className="model-picker" ref={modelPickerRef}>
+                        <button
+                            id="model-picker-button"
+                            type="button"
+                            className="model-picker-button"
+                            onClick={() => setIsModelPickerOpen((isOpen) => !isOpen)}
+                            disabled={!hasAvailableModels}
+                            aria-haspopup="listbox"
+                            aria-expanded={isModelPickerOpen}
+                        >
+                            <span className="model-picker-value">{modelPickerLabel}</span>
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="m6 9 6 6 6-6" />
+                            </svg>
+                        </button>
+
+                        {isModelPickerOpen && (
+                            <div
+                                className="model-picker-menu"
+                                role="listbox"
+                                aria-labelledby="model-picker-button"
+                            >
+                                {models.map((model) => {
+                                    const isSelected = model.id === selectedModelId;
+
+                                    return (
+                                        <button
+                                            key={model.id}
+                                            type="button"
+                                            className={`model-picker-option${
+                                                isSelected ? " model-picker-option-selected" : ""
+                                            }`}
+                                            onClick={() => handleModelSelect(model.id)}
+                                            role="option"
+                                            aria-selected={isSelected}
+                                        >
+                                            <span>{model.name}</span>
+                                            {isSelected && (
+                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path d="m20 6-11 11-5-5" />
+                                                </svg>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
                 </section>
 
                 <section className="metrics-grid">
