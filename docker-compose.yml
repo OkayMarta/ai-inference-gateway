@@ -11,12 +11,51 @@ services:
     volumes:
       - ai_gateway_postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
     container_name: ai-gateway-redis
     ports:
       - "6379:6379"
+
+  billing-migrations:
+    image: postgres:16-alpine
+    container_name: ai-gateway-billing-migrations
+    environment:
+      PGPASSWORD: postgres
+    volumes:
+      - ./services/billing-service/migrations:/migrations:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c 'set -e;
+      for file in /migrations/*.sql; do
+        echo "applying $$file";
+        psql -h postgres -U postgres -d billing_db -v ON_ERROR_STOP=1 -f "$$file";
+      done'
+
+  task-migrations:
+    image: postgres:16-alpine
+    container_name: ai-gateway-task-migrations
+    environment:
+      PGPASSWORD: postgres
+    volumes:
+      - ./services/task-service/migrations:/migrations:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c 'set -e;
+      for file in /migrations/*.sql; do
+        echo "applying $$file";
+        psql -h postgres -U postgres -d task_db -v ON_ERROR_STOP=1 -f "$$file";
+      done'
 
   billing-service:
     build:
@@ -35,7 +74,8 @@ services:
     ports:
       - "8081:8081"
     depends_on:
-      - postgres
+      billing-migrations:
+        condition: service_completed_successfully
 
   task-service:
     build:
@@ -59,9 +99,12 @@ services:
     ports:
       - "8082:8082"
     depends_on:
-      - postgres
-      - redis
-      - billing-service
+      task-migrations:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+      billing-service:
+        condition: service_started
 
   gateway-service:
     build:
@@ -77,8 +120,10 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - billing-service
-      - task-service
+      billing-service:
+        condition: service_started
+      task-service:
+        condition: service_started
 
   frontend:
     build:
