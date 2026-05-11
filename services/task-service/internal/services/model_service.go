@@ -1,27 +1,77 @@
 package services
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
 	"strings"
+
+	"github.com/redis/go-redis/v9"
 
 	"task-service/internal/models"
 )
+
+const allModelsCacheKey = "ai_models:all"
+
+type ModelCache interface {
+	Get(ctx context.Context, key string) (string, error)
+	Set(ctx context.Context, key string, value string) error
+}
 
 // ModelService handles model-related business logic.
 type ModelService struct {
 	repo   ModelRepository
 	ollama *OllamaClient
+	cache  ModelCache
 }
 
-func NewModelService(repo ModelRepository, ollama *OllamaClient) *ModelService {
+func NewModelService(repo ModelRepository, ollama *OllamaClient, cache ModelCache) *ModelService {
 	return &ModelService{
 		repo:   repo,
 		ollama: ollama,
+		cache:  cache,
 	}
 }
 
 func (s *ModelService) GetAll() ([]*models.AIModel, error) {
-	return s.repo.GetAll()
+	ctx := context.Background()
+
+	if s.cache != nil {
+		cachedModels, err := s.cache.Get(ctx, allModelsCacheKey)
+		if err == nil {
+			var items []*models.AIModel
+			if err := json.Unmarshal([]byte(cachedModels), &items); err == nil {
+				log.Println("models cache hit")
+				return items, nil
+			}
+
+			log.Printf("models cache decode error: %v", err)
+		} else if !errors.Is(err, redis.Nil) {
+			log.Printf("models cache read error: %v", err)
+		}
+	}
+
+	log.Println("models cache miss: loading from PostgreSQL")
+	items, err := s.repo.GetAll()
+	if err != nil {
+		return nil, err
+	}
+
+	if s.cache != nil {
+		payload, err := json.Marshal(items)
+		if err != nil {
+			log.Printf("models cache encode error: %v", err)
+			return items, nil
+		}
+
+		if err := s.cache.Set(ctx, allModelsCacheKey, string(payload)); err != nil {
+			log.Printf("models cache write error: %v", err)
+		}
+	}
+
+	return items, nil
 }
 
 func (s *ModelService) GetByID(id string) (*models.AIModel, error) {

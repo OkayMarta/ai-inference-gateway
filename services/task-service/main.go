@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
 
+	"task-service/internal/cache"
 	"task-service/internal/clients"
 	"task-service/internal/config"
 	dbpkg "task-service/internal/db"
@@ -37,8 +39,14 @@ func main() {
 
 	ollama := services.NewOllamaClient(cfg.OllamaURL)
 	billingClient := clients.NewBillingClient(cfg.BillingServiceURL, cfg.InternalServiceToken)
+	modelCache := cache.NewRedisCache(
+		cfg.Redis.Addr,
+		cfg.Redis.Password,
+		cfg.Redis.DB,
+		time.Duration(cfg.Redis.CacheTTLSeconds)*time.Second,
+	)
 
-	modelSvc := services.NewModelService(modelRepo, ollama)
+	modelSvc := services.NewModelService(modelRepo, ollama, modelCache)
 	workerSvc := services.NewWorkerService(workerRepo, taskRepo, modelRepo, ollama)
 	inferenceSvc := services.NewInferenceService(postgresDB, modelRepo, taskRepo, billingClient)
 
