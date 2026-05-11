@@ -18,6 +18,7 @@ const allModelsCacheKey = "ai_models:all"
 type ModelCache interface {
 	Get(ctx context.Context, key string) (string, error)
 	Set(ctx context.Context, key string, value string) error
+	Delete(ctx context.Context, key string) error
 }
 
 // ModelService handles model-related business logic.
@@ -110,7 +111,22 @@ func (s *ModelService) SyncFromOllama() error {
 		return fmt.Errorf("replace synced models: %w", err)
 	}
 
+	s.invalidateModelsCache(context.Background())
+
 	return nil
+}
+
+func (s *ModelService) invalidateModelsCache(ctx context.Context) {
+	if s.cache == nil {
+		return
+	}
+
+	if err := s.cache.Delete(ctx, allModelsCacheKey); err != nil {
+		log.Printf("models cache invalidation error: %v", err)
+		return
+	}
+
+	log.Println("models cache invalidated after Ollama sync")
 }
 
 func sanitizeModelID(name string) string {
