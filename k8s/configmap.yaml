@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-gateway-config
+  namespace: ai-gateway
+data:
+  DB_HOST: "postgres"
+  DB_PORT: "5432"
+  DB_USER: "postgres"
+  DB_SSLMODE: "disable"
+  BILLING_DB_NAME: "billing_db"
+  TASK_DB_NAME: "task_db"
+  REDIS_ADDR: "redis:6379"
+  REDIS_PASSWORD: ""
+  REDIS_DB: "0"
+  CACHE_TTL_SECONDS: "60"
+  BILLING_SERVICE_URL: "http://billing-service:8081"
+  TASK_SERVICE_URL: "http://task-service:8082"
+  FRONTEND_ORIGIN: "http://localhost:5173"
+  OLLAMA_URL: "http://host.docker.internal:11434"
