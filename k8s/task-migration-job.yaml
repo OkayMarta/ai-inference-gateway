@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: task-migrations
+  namespace: ai-gateway
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: task-migrations
+          image: postgres:16-alpine
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ai-gateway-secret
+                  key: DB_PASSWORD
+          command:
+            - sh
+            - -c
+            - |
+              for file in /migrations/*.sql; do
+                psql -h postgres -U postgres -d task_db -v ON_ERROR_STOP=1 -f "$file"
+              done
+          volumeMounts:
+            - name: migrations
+              mountPath: /migrations
+      volumes:
+        - name: migrations
+          configMap:
+            name: task-migrations
