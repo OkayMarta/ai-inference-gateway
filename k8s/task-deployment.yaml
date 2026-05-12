@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: task-service
-          image: ai-gateway-task-service:lab6
+          image: ai-gateway-task-service:k8s
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8082

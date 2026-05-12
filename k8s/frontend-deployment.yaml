@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: ai-gateway-frontend:lab6
+          image: ai-gateway-frontend:k8s
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5173

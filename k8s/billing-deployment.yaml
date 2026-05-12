@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: billing-service
-          image: ai-gateway-billing-service:lab6
+          image: ai-gateway-billing-service:k8s
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8081

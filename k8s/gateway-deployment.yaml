@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: gateway-service
-          image: ai-gateway-gateway-service:lab6
+          image: ai-gateway-gateway-service:k8s
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

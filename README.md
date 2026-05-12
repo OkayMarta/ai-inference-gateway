@@ -23,6 +23,7 @@ AI Inference Gateway is a full-stack web app for submitting prompts to local AI 
 ![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=111111)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5?logo=kubernetes&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-FF4438?logo=redis&logoColor=white)
 ![Ollama](https://img.shields.io/badge/Ollama-000000?logo=ollama&logoColor=white)
@@ -68,6 +69,8 @@ AI Inference Gateway is a full-stack web app for submitting prompts to local AI 
 ```text
 Frontend -> Gateway -> Billing / Task -> PostgreSQL / Ollama
 ```
+
+The same microservice system can also be deployed to Kubernetes using `Deployment`, `Service`, `ConfigMap`, `Secret`, and `Job` resources.
 
 ## Repository Structure
 
@@ -159,6 +162,80 @@ Services:
 - Task Service: http://localhost:8082
 - PostgreSQL: localhost:5432
 - Redis: localhost:6379
+
+## Running with Kubernetes
+
+Kubernetes manifests are located in the `k8s/` directory. The deployment uses the `ai-gateway` namespace.
+
+Components deployed:
+
+- frontend
+- gateway-service
+- billing-service
+- task-service
+- PostgreSQL
+- Redis
+- billing-migrations Job
+- task-migrations Job
+
+Build Docker images:
+
+```bash
+docker build -t ai-gateway-billing-service:k8s ./services/billing-service
+docker build -t ai-gateway-task-service:k8s ./services/task-service
+docker build -t ai-gateway-gateway-service:k8s ./services/gateway-service
+docker build -t ai-gateway-frontend:k8s ./frontend
+```
+
+Deploy:
+
+```bash
+kubectl apply -f k8s/
+```
+
+Verify:
+
+```bash
+kubectl get all -n ai-gateway
+kubectl get pods -n ai-gateway -o wide
+kubectl get deployments -n ai-gateway
+kubectl get services -n ai-gateway
+kubectl get jobs -n ai-gateway
+```
+
+Access:
+
+- Frontend: http://localhost:30017
+- Gateway API: http://localhost:30080
+
+Health check and models endpoint:
+
+```bash
+curl http://localhost:30080/healthz
+curl http://localhost:30080/api/models
+```
+
+Redis cache verification:
+
+```bash
+kubectl exec -it <redis-pod-name> -n ai-gateway -- redis-cli
+KEYS *
+GET ai_models:all
+TTL ai_models:all
+```
+
+Scaling example:
+
+```bash
+kubectl scale deployment gateway-service --replicas=3 -n ai-gateway
+```
+
+Rolling update example:
+
+```bash
+kubectl set image deployment/gateway-service gateway-service=ai-gateway-gateway-service:k8s-v2 -n ai-gateway
+kubectl rollout status deployment/gateway-service -n ai-gateway
+```
 
 ## Redis caching
 
