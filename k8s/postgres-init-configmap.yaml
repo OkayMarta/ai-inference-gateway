@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-scripts
+  namespace: ai-gateway
+data:
+  001_create_databases.sql: |
+    CREATE DATABASE billing_db;
+    CREATE DATABASE task_db;
