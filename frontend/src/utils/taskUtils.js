@@ -2,6 +2,8 @@ export const normalizeList = (value) => {
     return Array.isArray(value) ? value : [];
 };
 
+export const TASK_STATUSES = ["Queued", "Processing", "Completed", "Failed", "Cancelled"];
+
 export const countTasksByStatus = (tasks, status) => {
     return tasks.filter((task) => task.status === status).length;
 };

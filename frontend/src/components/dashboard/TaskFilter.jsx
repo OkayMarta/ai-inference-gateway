@@ -1,3 +1,5 @@
+import { TASK_STATUSES } from "../../utils/taskUtils";
+
 const TaskFilter = ({ statusFilter, onStatusFilterChange }) => (
     <div className="task-list-controls">
         <label className="field-label task-filter-label" htmlFor="task-status-filter">
@@ -10,11 +12,11 @@ const TaskFilter = ({ statusFilter, onStatusFilterChange }) => (
             className="field-input task-filter-select"
         >
             <option value="">All</option>
-            <option value="Queued">Queued</option>
-            <option value="Processing">Processing</option>
-            <option value="Completed">Completed</option>
-            <option value="Failed">Failed</option>
-            <option value="Cancelled">Cancelled</option>
+            {TASK_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                    {status}
+                </option>
+            ))}
         </select>
     </div>
 );
