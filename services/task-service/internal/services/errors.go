@@ -2,6 +2,8 @@ package services
 
 import (
 	"errors"
+	"fmt"
+	"net/http"
 	"strings"
 )
 
@@ -24,12 +26,28 @@ var (
 	ErrInvalidAuthInput       = errors.New("invalid auth input")
 	ErrInvalidToken           = errors.New("invalid token")
 	ErrBillingUnavailable     = errors.New("billing service unavailable")
+	ErrBillingLookupFailed    = errors.New("billing lookup failed")
 	ErrBillingChargeFailed    = errors.New("billing charge failed")
 	ErrBillingRefundFailed    = errors.New("billing refund failed")
 	ErrTaskCreationFailed     = errors.New("task creation failed after billing charge; refund compensation succeeded")
 	ErrTaskCompensationFailed = errors.New("task creation failed after billing charge; refund compensation failed")
 	ErrTaskCancellationFailed = errors.New("billing refund succeeded but task cancellation failed")
 )
+
+type DownstreamError struct {
+	StatusCode int
+	Message    string
+}
+
+func (e *DownstreamError) Error() string {
+	if e.Message != "" {
+		return e.Message
+	}
+	if statusText := http.StatusText(e.StatusCode); statusText != "" {
+		return statusText
+	}
+	return fmt.Sprintf("downstream service returned status %d", e.StatusCode)
+}
 
 // Репозиторії поки повертають текстові not found помилки, тому тимчасово
 // нормалізуємо їх тут до доменних помилок сервісного шару.

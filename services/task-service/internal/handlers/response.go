@@ -37,6 +37,11 @@ func respondError(w http.ResponseWriter, r *http.Request, status int, message st
 }
 
 func mapErrorToStatus(err error) int {
+	var downstream *services.DownstreamError
+	if errors.As(err, &downstream) {
+		return downstream.StatusCode
+	}
+
 	switch {
 	case errors.Is(err, services.ErrUserNotFound):
 		return http.StatusNotFound
@@ -70,6 +75,8 @@ func mapErrorToStatus(err error) int {
 		return http.StatusBadRequest
 	case errors.Is(err, services.ErrBillingUnavailable):
 		return http.StatusServiceUnavailable
+	case errors.Is(err, services.ErrBillingLookupFailed):
+		return http.StatusBadGateway
 	case errors.Is(err, services.ErrBillingChargeFailed):
 		return http.StatusBadGateway
 	case errors.Is(err, services.ErrBillingRefundFailed):
@@ -88,7 +95,10 @@ func mapErrorToStatus(err error) int {
 func respondServiceError(w http.ResponseWriter, r *http.Request, err error) {
 	status := mapErrorToStatus(err)
 	message := err.Error()
+
+	var downstream *services.DownstreamError
 	if status == http.StatusInternalServerError &&
+		!errors.As(err, &downstream) &&
 		!errors.Is(err, services.ErrTaskCreationFailed) &&
 		!errors.Is(err, services.ErrTaskCancellationFailed) {
 		message = "internal server error"

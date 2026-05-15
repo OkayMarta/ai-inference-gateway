@@ -51,7 +51,7 @@ func (s *InferenceService) SubmitPrompt(userID, modelID, payload string) (*model
 	}
 
 	if _, err := s.billing.GetUser(userID); err != nil {
-		return nil, mapBillingError(err, ErrBillingUnavailable, ErrUserNotFound)
+		return nil, mapBillingError(err, ErrBillingUnavailable, ErrBillingLookupFailed)
 	}
 
 	task := &models.PromptTask{
@@ -202,7 +202,10 @@ func mapBillingError(err error, unavailableError, downstreamError error) error {
 		case 422:
 			return ErrInsufficientBalance
 		default:
-			return fmt.Errorf("%w: %s", downstreamError, err.Error())
+			return &DownstreamError{
+				StatusCode: downstream.StatusCode,
+				Message:    downstream.Error(),
+			}
 		}
 	}
 

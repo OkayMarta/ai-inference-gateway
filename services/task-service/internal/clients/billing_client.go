@@ -111,7 +111,12 @@ func decodeDownstreamError(resp *http.Response) error {
 	var body struct {
 		Message string `json:"message"`
 	}
-	_ = json.NewDecoder(resp.Body).Decode(&body)
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return fmt.Errorf("decode billing error response: %w", err)
+	}
+	if body.Message == "" {
+		return fmt.Errorf("decode billing error response: missing message")
+	}
 
 	return &DownstreamError{
 		StatusCode: resp.StatusCode,
