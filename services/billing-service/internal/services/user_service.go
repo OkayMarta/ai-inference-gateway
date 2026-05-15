@@ -7,8 +7,7 @@ import (
 )
 
 type UpdateUserInput struct {
-	Username     *string
-	TokenBalance *float64
+	Username *string
 }
 
 type UserService struct {
@@ -36,7 +35,7 @@ func (s *UserService) GetAll() ([]*models.User, error) {
 }
 
 func (s *UserService) Update(id string, input UpdateUserInput) (*models.User, error) {
-	if input.Username == nil && input.TokenBalance == nil {
+	if input.Username == nil {
 		return nil, ErrInvalidUserUpdate
 	}
 
@@ -53,14 +52,7 @@ func (s *UserService) Update(id string, input UpdateUserInput) (*models.User, er
 		user.Username = trimmedUsername
 	}
 
-	if input.TokenBalance != nil {
-		if *input.TokenBalance < 0 {
-			return nil, ErrInvalidUserUpdate
-		}
-		user.TokenBalance = *input.TokenBalance
-	}
-
-	if err := s.repo.Update(user); err != nil {
+	if err := s.repo.UpdateProfile(user); err != nil {
 		if isRepoNotFoundError(err, "user not found:") {
 			return nil, ErrUserNotFound
 		}

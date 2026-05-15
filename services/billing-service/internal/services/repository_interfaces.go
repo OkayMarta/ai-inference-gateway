@@ -11,7 +11,7 @@ type UserRepository interface {
 	GetByIDTx(tx appdb.DBTX, id string) (*models.User, error)
 	GetByEmail(email string) (*models.User, error)
 	Create(user *models.User) error
-	Update(user *models.User) error
+	UpdateProfile(user *models.User) error
 	UpdatePasswordHash(userID string, passwordHash string) error
 	DeductBalanceTx(tx appdb.DBTX, id string, amount float64) error
 	AddBalanceTx(tx appdb.DBTX, id string, amount float64) error

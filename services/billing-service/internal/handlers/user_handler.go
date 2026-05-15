@@ -18,8 +18,7 @@ func NewUserHandler(s *services.UserService) *UserHandler {
 }
 
 type updateUserRequest struct {
-	Username     *string  `json:"username"`
-	TokenBalance *float64 `json:"tokenBalance"`
+	Username *string `json:"username"`
 }
 
 func (h *UserHandler) GetAll(w http.ResponseWriter, r *http.Request) {
@@ -72,8 +71,7 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	updatedUser, err := h.service.Update(id, services.UpdateUserInput{
-		Username:     req.Username,
-		TokenBalance: req.TokenBalance,
+		Username: req.Username,
 	})
 	if err != nil {
 		respondServiceError(w, r, err)

@@ -124,21 +124,31 @@ func (r *UserRepository) Create(user *models.User) error {
 	return nil
 }
 
-func (r *UserRepository) Update(user *models.User) error {
-	result, err := r.db.Exec(`
+func (r *UserRepository) UpdateProfile(user *models.User) error {
+	// token_balance must not be modified through generic user updates; use billing transaction methods instead.
+	err := r.db.QueryRow(`
 		UPDATE users
-		SET username = $2,
-		    email = $3,
-		    password_hash = $4,
-		    token_balance = $5,
-		    role = $6
+		SET username = $2
 		WHERE id = $1
-	`, user.ID, user.Username, user.Email, user.PasswordHash, user.TokenBalance, user.Role)
+		RETURNING id, username, email, password_hash, token_balance, role, created_at
+	`, user.ID, user.Username).Scan(
+		&user.ID,
+		&user.Username,
+		&user.Email,
+		&user.PasswordHash,
+		&user.TokenBalance,
+		&user.Role,
+		&user.CreatedAt,
+	)
 	if err != nil {
-		return fmt.Errorf("update user %s: %w", user.ID, err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("user not found: %s", user.ID)
+		}
+		return fmt.Errorf("update user profile %s: %w", user.ID, err)
 	}
 
-	return ensureRowsAffected(result, fmt.Sprintf("user not found: %s", user.ID))
+	user.CreatedAt = user.CreatedAt.UTC()
+	return nil
 }
 
 func (r *UserRepository) UpdatePasswordHash(userID string, passwordHash string) error {
