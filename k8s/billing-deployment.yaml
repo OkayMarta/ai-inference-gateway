@@ -62,6 +62,11 @@ spec:
                 secretKeyRef:
                   name: ai-gateway-secret
                   key: INTERNAL_SERVICE_TOKEN
+            - name: FRONTEND_ORIGIN
+              valueFrom:
+                configMapKeyRef:
+                  name: ai-gateway-config
+                  key: FRONTEND_ORIGIN
           readinessProbe:
             httpGet:
               path: /healthz

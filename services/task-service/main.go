@@ -81,7 +81,7 @@ func main() {
 	r.Use(chimw.Logger)
 	r.Use(handlers.RecoveryMiddleware)
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5173"},
+		AllowedOrigins:   []string{cfg.FrontendOrigin},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Content-Type", "Authorization", "X-User-ID", "X-User-Role"},
 		AllowCredentials: true,

@@ -11,6 +11,7 @@ type Config struct {
 	OllamaURL            string
 	BillingServiceURL    string
 	InternalServiceToken string
+	FrontendOrigin       string
 	DB                   DBConfig
 	Redis                RedisConfig
 }
@@ -37,6 +38,7 @@ func Load() Config {
 		OllamaURL:            envOrDefault("OLLAMA_URL", "http://localhost:11434"),
 		BillingServiceURL:    envOrDefault("BILLING_SERVICE_URL", "http://localhost:8081"),
 		InternalServiceToken: envOrDefault("INTERNAL_SERVICE_TOKEN", "dev-internal-secret"),
+		FrontendOrigin:       envOrDefault("FRONTEND_ORIGIN", "http://localhost:5173"),
 		DB: DBConfig{
 			Host:     envOrDefault("DB_HOST", "localhost"),
 			Port:     envOrDefault("DB_PORT", "5432"),

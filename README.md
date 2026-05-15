@@ -99,6 +99,14 @@ Each service has its own example environment file:
 
 Copy each `.env.example` to `.env` and fill in local values for your machine. Do not commit real `.env` files or secrets.
 
+The backend services use `FRONTEND_ORIGIN` for CORS. If it is not set, they default to `http://localhost:5173`.
+
+For local development and Docker Compose, use:
+
+```env
+FRONTEND_ORIGIN=http://localhost:5173
+```
+
 ## Database Setup
 
 Create two PostgreSQL databases:
@@ -154,6 +162,8 @@ http://localhost:5173
 docker compose up --build
 ```
 
+Docker Compose passes `FRONTEND_ORIGIN=http://localhost:5173` to the backend services, matching the Vite frontend port.
+
 Services:
 
 - Frontend: http://localhost:5173
@@ -207,6 +217,8 @@ Access:
 
 - Frontend: http://localhost:30017
 - Gateway API: http://localhost:30080
+
+Kubernetes reads `FRONTEND_ORIGIN` from `k8s/configmap.yaml`. The default manifest sets it to `http://localhost:30017`, matching the frontend NodePort.
 
 Health check and models endpoint:
 

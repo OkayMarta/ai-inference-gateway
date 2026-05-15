@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
@@ -19,6 +20,8 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
 	}
+
+	frontendOrigin := envOrDefault("FRONTEND_ORIGIN", "http://localhost:5173")
 
 	postgresDB, err := dbpkg.InitDB()
 	if err != nil {
@@ -78,7 +81,7 @@ func main() {
 	r.Use(chimw.Logger)
 	r.Use(handlers.RecoveryMiddleware)
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5173"},
+		AllowedOrigins:   []string{frontendOrigin},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Content-Type", "Authorization"},
 		AllowCredentials: true,
@@ -116,4 +119,12 @@ func main() {
 	if err := http.ListenAndServe(":8080", r); err != nil {
 		log.Fatalf("помилка запуску сервера: %v", err)
 	}
+}
+
+func envOrDefault(key, fallback string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	return value
 }

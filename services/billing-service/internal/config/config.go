@@ -8,6 +8,7 @@ import (
 type Config struct {
 	Port                 string
 	InternalServiceToken string
+	FrontendOrigin       string
 	DB                   DBConfig
 }
 
@@ -24,6 +25,7 @@ func Load() Config {
 	return Config{
 		Port:                 envOrDefault("PORT", "8081"),
 		InternalServiceToken: envOrDefault("INTERNAL_SERVICE_TOKEN", "dev-internal-secret"),
+		FrontendOrigin:       envOrDefault("FRONTEND_ORIGIN", "http://localhost:5173"),
 		DB: DBConfig{
 			Host:     envOrDefault("DB_HOST", "localhost"),
 			Port:     envOrDefault("DB_PORT", "5432"),

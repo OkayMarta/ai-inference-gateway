@@ -71,6 +71,7 @@ services:
       DB_NAME: billing_db
       DB_SSLMODE: disable
       JWT_SECRET: dev-secret
+      FRONTEND_ORIGIN: http://localhost:5173
     ports:
       - "8081:8081"
     depends_on:
@@ -96,6 +97,7 @@ services:
       CACHE_TTL_SECONDS: "60"
       BILLING_SERVICE_URL: http://billing-service:8081
       OLLAMA_URL: http://host.docker.internal:11434
+      FRONTEND_ORIGIN: http://localhost:5173
     ports:
       - "8082:8082"
     depends_on:

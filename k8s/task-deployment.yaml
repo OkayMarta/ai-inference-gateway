@@ -82,6 +82,11 @@ spec:
                 configMapKeyRef:
                   name: ai-gateway-config
                   key: OLLAMA_URL
+            - name: FRONTEND_ORIGIN
+              valueFrom:
+                configMapKeyRef:
+                  name: ai-gateway-config
+                  key: FRONTEND_ORIGIN
             - name: INTERNAL_SERVICE_TOKEN
               valueFrom:
                 secretKeyRef:
