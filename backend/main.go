@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
@@ -21,7 +22,9 @@ func main() {
 		log.Println("No .env file found")
 	}
 
+	appEnv := appEnv()
 	frontendOrigin := envOrDefault("FRONTEND_ORIGIN", "http://localhost:5173")
+	jwtSecret := requiredSecret("JWT_SECRET", "dev-secret", appEnv)
 
 	postgresDB, err := dbpkg.InitDB()
 	if err != nil {
@@ -63,7 +66,7 @@ func main() {
 	}
 
 	log.Println("initializing application services...")
-	authSvc := services.NewAuthService(userRepo)
+	authSvc := services.NewAuthService(userRepo, jwtSecret)
 	userSvc := services.NewUserService(userRepo)
 	inferenceSvc := services.NewInferenceService(postgresDB, userRepo, modelRepo, taskRepo, txRepo)
 
@@ -127,4 +130,25 @@ func envOrDefault(key, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func appEnv() string {
+	return strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
+}
+
+func isDevelopment(appEnv string) bool {
+	return appEnv == "" || appEnv == "development"
+}
+
+func requiredSecret(key, fallback, appEnv string) string {
+	value := os.Getenv(key)
+	if value != "" {
+		return value
+	}
+	if isDevelopment(appEnv) {
+		return fallback
+	}
+
+	log.Fatalf("%s is required when APP_ENV=%s", key, appEnv)
+	return ""
 }

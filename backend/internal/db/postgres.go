@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net"
+	"net/url"
 	"os"
 
 	_ "github.com/lib/pq"
@@ -31,15 +33,18 @@ func InitDB() (*sql.DB, error) {
 		sslMode = "disable"
 	}
 
-	connStr := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s TimeZone=UTC",
-		host,
-		port,
-		user,
-		password,
-		name,
-		sslMode,
-	)
+	dsn := url.URL{
+		Scheme:  "postgres",
+		User:    url.UserPassword(user, password),
+		Host:    net.JoinHostPort(host, port),
+		Path:    "/" + name,
+		RawPath: "/" + url.PathEscape(name),
+	}
+	query := dsn.Query()
+	query.Set("sslmode", sslMode)
+	query.Set("TimeZone", "UTC")
+	dsn.RawQuery = query.Encode()
+	connStr := dsn.String()
 
 	// Використовуємо database/sql як стандартний абстрактний шар для роботи з БД: він дає уніфікований API, пул з'єднань і дозволяє підключати драйвер pq без жорсткої прив'язки бізнес-логіки до конкретної реалізації драйвера.
 	db, err := sql.Open("postgres", connStr)

@@ -1,12 +1,16 @@
 package config
 
 import (
-	"fmt"
+	"log"
+	"net"
+	"net/url"
 	"os"
+	"strings"
 )
 
 type Config struct {
 	Port                 string
+	JWTSecret            string
 	InternalServiceToken string
 	FrontendOrigin       string
 	DB                   DBConfig
@@ -22,9 +26,12 @@ type DBConfig struct {
 }
 
 func Load() Config {
+	appEnv := appEnv()
+
 	return Config{
 		Port:                 envOrDefault("PORT", "8081"),
-		InternalServiceToken: envOrDefault("INTERNAL_SERVICE_TOKEN", "dev-internal-secret"),
+		JWTSecret:            requiredSecret("JWT_SECRET", "dev-secret", appEnv),
+		InternalServiceToken: requiredSecret("INTERNAL_SERVICE_TOKEN", "dev-internal-secret", appEnv),
 		FrontendOrigin:       envOrDefault("FRONTEND_ORIGIN", "http://localhost:5173"),
 		DB: DBConfig{
 			Host:     envOrDefault("DB_HOST", "localhost"),
@@ -38,15 +45,20 @@ func Load() Config {
 }
 
 func (c DBConfig) ConnectionString() string {
-	return fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s TimeZone=UTC",
-		c.Host,
-		c.Port,
-		c.User,
-		c.Password,
-		c.Name,
-		c.SSLMode,
-	)
+	dsn := url.URL{
+		Scheme:  "postgres",
+		User:    url.UserPassword(c.User, c.Password),
+		Host:    net.JoinHostPort(c.Host, c.Port),
+		Path:    "/" + c.Name,
+		RawPath: "/" + url.PathEscape(c.Name),
+	}
+
+	query := dsn.Query()
+	query.Set("sslmode", c.SSLMode)
+	query.Set("TimeZone", "UTC")
+	dsn.RawQuery = query.Encode()
+
+	return dsn.String()
 }
 
 func envOrDefault(key, fallback string) string {
@@ -55,4 +67,25 @@ func envOrDefault(key, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func appEnv() string {
+	return strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
+}
+
+func isDevelopment(appEnv string) bool {
+	return appEnv == "" || appEnv == "development"
+}
+
+func requiredSecret(key, fallback, appEnv string) string {
+	value := os.Getenv(key)
+	if value != "" {
+		return value
+	}
+	if isDevelopment(appEnv) {
+		return fallback
+	}
+
+	log.Fatalf("%s is required when APP_ENV=%s", key, appEnv)
+	return ""
 }

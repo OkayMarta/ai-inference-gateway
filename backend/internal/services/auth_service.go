@@ -1,7 +1,6 @@
 package services
 
 import (
-	"os"
 	"strings"
 	"time"
 	"unicode"
@@ -18,7 +17,8 @@ const (
 )
 
 type AuthService struct {
-	userRepo UserRepository
+	userRepo  UserRepository
+	jwtSecret []byte
 }
 
 type AuthClaims struct {
@@ -28,8 +28,11 @@ type AuthClaims struct {
 	jwt.RegisteredClaims
 }
 
-func NewAuthService(userRepo UserRepository) *AuthService {
-	return &AuthService{userRepo: userRepo}
+func NewAuthService(userRepo UserRepository, jwtSecret string) *AuthService {
+	return &AuthService{
+		userRepo:  userRepo,
+		jwtSecret: []byte(jwtSecret),
+	}
 }
 
 func (s *AuthService) Register(username, email, password string) (*models.User, string, error) {
@@ -113,7 +116,7 @@ func (s *AuthService) GenerateToken(user *models.User) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret())
+	return token.SignedString(s.jwtSecret)
 }
 
 func (s *AuthService) ValidateToken(tokenValue string) (*AuthClaims, error) {
@@ -127,7 +130,7 @@ func (s *AuthService) ValidateToken(tokenValue string) (*AuthClaims, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, ErrInvalidToken
 		}
-		return jwtSecret(), nil
+		return s.jwtSecret, nil
 	})
 	if err != nil {
 		return nil, ErrInvalidToken
@@ -188,14 +191,4 @@ func isDuplicateEmailError(err error) bool {
 	return strings.Contains(errText, "users_email_unique") ||
 		strings.Contains(errText, "duplicate key") ||
 		strings.Contains(errText, "email already exists")
-}
-
-func jwtSecret() []byte {
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		// Development fallback for local labs only. Set JWT_SECRET outside development.
-		secret = "dev-secret"
-	}
-
-	return []byte(secret)
 }

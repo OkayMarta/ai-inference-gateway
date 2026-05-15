@@ -34,7 +34,7 @@ func main() {
 	resetRepo := repositories.NewPasswordResetRepository(postgresDB)
 	emailSvc := services.NewEmailServiceFromEnv()
 
-	authSvc := services.NewAuthService(userRepo, resetRepo, emailSvc)
+	authSvc := services.NewAuthService(userRepo, resetRepo, emailSvc, cfg.JWTSecret)
 	userSvc := services.NewUserService(userRepo)
 	billingSvc := services.NewBillingService(postgresDB, userRepo, txRepo)
 
