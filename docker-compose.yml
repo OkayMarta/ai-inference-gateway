@@ -35,7 +35,7 @@ services:
         condition: service_healthy
     command: >
       sh -c 'set -e;
-      for file in /migrations/*.sql; do
+      for file in $$(find /migrations -maxdepth 1 -name '*.sql' | sort); do
         echo "applying $$file";
         psql -h postgres -U postgres -d billing_db -v ON_ERROR_STOP=1 -f "$$file";
       done'
@@ -52,7 +52,7 @@ services:
         condition: service_healthy
     command: >
       sh -c 'set -e;
-      for file in /migrations/*.sql; do
+      for file in $$(find /migrations -maxdepth 1 -name '*.sql' | sort); do
         echo "applying $$file";
         psql -h postgres -U postgres -d task_db -v ON_ERROR_STOP=1 -f "$$file";
       done'
