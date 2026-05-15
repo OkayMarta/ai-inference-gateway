@@ -29,6 +29,11 @@ type updateTaskRequest struct {
 	Payload *string `json:"payload"`
 }
 
+const defaultTaskListLimit = 20
+
+// MaxTaskListLimit protects the database from oversized list queries.
+const MaxTaskListLimit = 100
+
 func (h *TaskHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	userID, _, ok := gatewayIdentity(r)
 	if !ok {
@@ -149,10 +154,10 @@ func (h *TaskHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	query := r.URL.Query()
 
-	limit := 20
+	limit := defaultTaskListLimit
 	if rawLimit := query.Get("limit"); rawLimit != "" {
 		parsedLimit, err := strconv.Atoi(rawLimit)
-		if err != nil || parsedLimit <= 0 {
+		if err != nil || parsedLimit <= 0 || parsedLimit > MaxTaskListLimit {
 			respondError(w, r, http.StatusBadRequest, services.ErrInvalidPagination.Error())
 			return
 		}
