@@ -114,10 +114,14 @@ func (s *InferenceService) ListTasks(filter TaskListFilter) ([]*models.PromptTas
 	return s.taskRepo.List(filter)
 }
 
-func (s *InferenceService) UpdateTaskPayload(id string, payload string) (*models.PromptTask, error) {
+func (s *InferenceService) UpdateTaskPayload(id string, currentUserID string, payload string) (*models.PromptTask, error) {
 	task, err := s.GetTaskByID(id)
 	if err != nil {
 		return nil, err
+	}
+
+	if task.UserID != currentUserID {
+		return nil, ErrForbidden
 	}
 
 	if task.Status != models.StatusQueued {
@@ -140,7 +144,7 @@ func (s *InferenceService) UpdateTaskPayload(id string, payload string) (*models
 	return task, nil
 }
 
-func (s *InferenceService) CancelTask(id, userID, role string) (*models.PromptTask, error) {
+func (s *InferenceService) CancelTask(id, currentUserID string) (*models.PromptTask, error) {
 	tx, err := s.db.BeginTx(context.Background(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("%w: begin cancellation transaction: %v", ErrTaskCancellationFailed, err)
@@ -155,7 +159,7 @@ func (s *InferenceService) CancelTask(id, userID, role string) (*models.PromptTa
 		return nil, err
 	}
 
-	if role != "admin" && task.UserID != userID {
+	if task.UserID != currentUserID {
 		_ = tx.Rollback()
 		return nil, ErrForbidden
 	}

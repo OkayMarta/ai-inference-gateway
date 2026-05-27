@@ -88,20 +88,9 @@ func (h *TaskHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
-	userID, role, ok := gatewayIdentity(r)
+	userID, _, ok := gatewayIdentity(r)
 	if !ok {
 		respondError(w, r, http.StatusUnauthorized, services.ErrUnauthorized.Error())
-		return
-	}
-
-	id := chi.URLParam(r, "id")
-	task, err := h.inference.GetTaskByID(id)
-	if err != nil {
-		respondServiceError(w, r, err)
-		return
-	}
-	if !canAccessTask(userID, role, task) {
-		respondError(w, r, http.StatusForbidden, services.ErrForbidden.Error())
 		return
 	}
 
@@ -119,7 +108,7 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedTask, err := h.inference.UpdateTaskPayload(id, *req.Payload)
+	updatedTask, err := h.inference.UpdateTaskPayload(chi.URLParam(r, "id"), userID, *req.Payload)
 	if err != nil {
 		respondServiceError(w, r, err)
 		return
@@ -129,14 +118,14 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
-	userID, role, ok := gatewayIdentity(r)
+	userID, _, ok := gatewayIdentity(r)
 	if !ok {
 		respondError(w, r, http.StatusUnauthorized, services.ErrUnauthorized.Error())
 		return
 	}
 
 	id := chi.URLParam(r, "id")
-	cancelledTask, err := h.inference.CancelTask(id, userID, role)
+	cancelledTask, err := h.inference.CancelTask(id, userID)
 	if err != nil {
 		respondServiceError(w, r, err)
 		return
