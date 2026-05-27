@@ -15,11 +15,15 @@ import (
 )
 
 type fakeModelRepo struct {
-	model *models.AIModel
+	model      *models.AIModel
+	getByIDErr error
 }
 
 func (r *fakeModelRepo) GetAll() ([]*models.AIModel, error) { return nil, nil }
 func (r *fakeModelRepo) GetByID(id string) (*models.AIModel, error) {
+	if r.getByIDErr != nil {
+		return nil, r.getByIDErr
+	}
 	if r.model == nil || r.model.ID != id {
 		return nil, fmt.Errorf("model not found: %s", id)
 	}
@@ -72,13 +76,18 @@ func (r *fakeTaskRepo) GetNextQueued(supportedModels []string) (*models.PromptTa
 }
 
 type fakeBillingGateway struct {
+	chargeCalls  int
+	getUserCalls int
 	refundCalls  int
 	refundUserID string
 	refundTaskID string
 	refundAmount float64
 }
 
-func (g *fakeBillingGateway) Charge(userID, taskID string, amount float64) error { return nil }
+func (g *fakeBillingGateway) Charge(userID, taskID string, amount float64) error {
+	g.chargeCalls++
+	return nil
+}
 func (g *fakeBillingGateway) Refund(userID, taskID string, amount float64) error {
 	g.refundCalls++
 	g.refundUserID = userID
@@ -87,9 +96,24 @@ func (g *fakeBillingGateway) Refund(userID, taskID string, amount float64) error
 	return nil
 }
 func (g *fakeBillingGateway) GetUser(userID string) (*clients.UserDTO, error) {
+	g.getUserCalls++
 	return &clients.UserDTO{ID: userID}, nil
 }
 
+func TestSubmitPromptFailsForInactiveModel(t *testing.T) {
+	modelRepo := &fakeModelRepo{getByIDErr: fmt.Errorf("model not found: inactive-model")}
+	taskRepo := &fakeTaskRepo{}
+	billing := &fakeBillingGateway{}
+	svc := NewInferenceService(nil, modelRepo, taskRepo, billing)
+
+	_, err := svc.SubmitPrompt("user-1", "inactive-model", "prompt")
+	if !errors.Is(err, ErrModelNotFound) {
+		t.Fatalf("expected ErrModelNotFound for inactive model, got %v", err)
+	}
+	if billing.getUserCalls != 0 || billing.chargeCalls != 0 {
+		t.Fatalf("expected no billing calls for inactive model, got getUser=%d charge=%d", billing.getUserCalls, billing.chargeCalls)
+	}
+}
 func TestUpdateTaskPayloadOwnerCanUpdateQueuedTask(t *testing.T) {
 	taskRepo := &fakeTaskRepo{task: testTask(models.StatusQueued)}
 	svc := NewInferenceService(nil, &fakeModelRepo{}, taskRepo, &fakeBillingGateway{})

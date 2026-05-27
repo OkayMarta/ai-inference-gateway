@@ -47,21 +47,26 @@ func (r *ModelRepository) GetAll() ([]*models.AIModel, error) {
 }
 
 func (r *ModelRepository) GetByID(id string) (*models.AIModel, error) {
-	return r.getByID(r.db, id)
+	return r.getByID(r.db, id, true)
 }
 
 func (r *ModelRepository) GetByIDTx(tx appdb.DBTX, id string) (*models.AIModel, error) {
-	return r.getByID(tx, id)
+	return r.getByID(tx, id, false)
 }
 
-func (r *ModelRepository) getByID(exec appdb.DBTX, id string) (*models.AIModel, error) {
+func (r *ModelRepository) getByID(exec appdb.DBTX, id string, activeOnly bool) (*models.AIModel, error) {
 	model := &models.AIModel{}
 
-	err := exec.QueryRow(`
+	query := `
 		SELECT id, name, description, token_cost
 		FROM ai_models
 		WHERE id = $1
-	`, id).Scan(&model.ID, &model.Name, &model.Description, &model.TokenCost)
+	`
+	if activeOnly {
+		query += " AND is_active = TRUE"
+	}
+
+	err := exec.QueryRow(query, id).Scan(&model.ID, &model.Name, &model.Description, &model.TokenCost)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("model not found: %s", id)
