@@ -1,6 +1,6 @@
 # Go
-/backend/ai-inference-gateway
-/backend/bin/
+/legacy/backend/ai-inference-gateway
+/legacy/backend/bin/
 
 # Frontend
 /frontend/node_modules/
@@ -9,8 +9,8 @@
 .env.*
 !.env.example
 !**/.env.example
-/backend/.env
-/backend/.test-backend.out.log
-/backend/.test-backend.err.log
-/backend/.test-backend.pid
+/legacy/backend/.env
+/legacy/backend/.test-backend.out.log
+/legacy/backend/.test-backend.err.log
+/legacy/backend/.test-backend.pid
 .DS_Store

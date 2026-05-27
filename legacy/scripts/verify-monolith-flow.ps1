@@ -1,3 +1,6 @@
+# Legacy verification script for the previous monolithic backend.
+# This script is not used for the final microservice runtime.
+
 param(
     [string]$BaseUrl = "http://127.0.0.1:8080",
     [int]$PollAttempts = 30,
