@@ -64,30 +64,48 @@ AI Inference Gateway is a full-stack web app for submitting prompts to local AI 
 | `billing-service` |  `8081` | Auth, users, balances, transactions, password reset |
 | `task-service`    |  `8082` | Models, tasks, workers, Ollama integration          |
 | PostgreSQL        |  `5432` | `billing_db` and `task_db`                          |
+| Redis             |  `6379` | Cache for `GET /api/models`                         |
 | Ollama            | `11434` | Local AI model runtime                              |
 
 ```text
-Frontend -> Gateway -> Billing / Task -> PostgreSQL / Ollama
+Frontend -> Gateway -> Billing / Task -> PostgreSQL / Redis / Ollama
 ```
 
-The same microservice system can also be deployed to Kubernetes using `Deployment`, `Service`, `ConfigMap`, `Secret`, and `Job` resources.
+The final runtime architecture uses only the frontend, gateway-service, billing-service, task-service, PostgreSQL, Redis, and external local Ollama. The same microservice system can also be deployed to Kubernetes using `Deployment`, `Service`, `ConfigMap`, `Secret`, and `Job` resources.
+
+`legacy/backend/` is not used by the final Docker Compose or Kubernetes runtime. It contains the previous monolithic implementation and is kept only for historical reference.
 
 ## Repository Structure
 
 ```text
 frontend/
-  React + Vite frontend application
+  React/Vite frontend application
 
 services/
   gateway-service/
-  billing-service/
-  task-service/
+    Public API gateway, JWT/CORS validation, routing/proxying requests to internal services
 
-backend/
-  Earlier monolith/reference implementation
+  billing-service/
+    Users, authentication, balances, transactions, password reset
+
+  task-service/
+    AI models, prompt tasks, workers, Ollama integration, Redis cache for GET /api/models
+
+shared/
+  Shared contracts/auth helpers used by services
+
+docker/
+  Docker-related configuration
+
+k8s/
+  Kubernetes manifests
+
+legacy/
+  backend/
+    Previous monolithic implementation, kept only for historical reference
 ```
 
-The current active application is in `frontend/` and `services/`. The `backend/` directory is kept as an earlier reference implementation.
+The current active application is in `frontend/`, `services/`, `shared/`, `docker/`, and `k8s/`. The old monolithic backend was moved to `legacy/backend/`; it represents an earlier stage of the project and is not part of the active final runtime architecture.
 
 ## Environment Setup
 
@@ -99,7 +117,7 @@ Each service has its own example environment file:
 
 Copy each `.env.example` to `.env` and fill in local values for your machine. Do not commit real `.env` files or secrets.
 
-The backend services use `FRONTEND_ORIGIN` for CORS. If it is not set, they default to `http://localhost:5173`.
+The Go services use `FRONTEND_ORIGIN` for CORS. If it is not set, they default to `http://localhost:5173`.
 
 For local development and Docker Compose, use:
 
@@ -162,7 +180,7 @@ http://localhost:5173
 docker compose up --build
 ```
 
-Docker Compose passes `FRONTEND_ORIGIN=http://localhost:5173` to the backend services, matching the Vite frontend port.
+Docker Compose passes `FRONTEND_ORIGIN=http://localhost:5173` to the Go services, matching the Vite frontend port. It does not run `legacy/backend/`.
 
 Services:
 
