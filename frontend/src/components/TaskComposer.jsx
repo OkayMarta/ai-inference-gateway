@@ -2,6 +2,11 @@ import { useEffect, useRef, useState } from "react";
 
 import SectionCard from "./SectionCard";
 
+const formatMetricValue = (value) => {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue.toFixed(1) : "\u2014";
+};
+
 const TaskComposer = ({
     models,
     hasAvailableModels,
@@ -26,7 +31,8 @@ const TaskComposer = ({
     const modelPickerRef = useRef(null);
     const noModelsNotice =
         "No models are available. Make sure Ollama is running and has models loaded.";
-    const selectedModel = models.find((model) => model.id === selectedModelId);
+    const safeModels = Array.isArray(models) ? models : [];
+    const selectedModel = safeModels.find((model) => model.id === selectedModelId);
     const modelPickerLabel = selectedModel
         ? selectedModel.name
         : hasAvailableModels
@@ -157,7 +163,7 @@ const TaskComposer = ({
                                 role="listbox"
                                 aria-labelledby="model-picker-button"
                             >
-                                {models.map((model) => {
+                                {safeModels.map((model) => {
                                     const isSelected = model.id === selectedModelId;
 
                                     return (
@@ -198,7 +204,7 @@ const TaskComposer = ({
                         <div>
                             <span className="metric-label">Balance</span>
                             <span className="metric-value">
-                                {currentUser ? currentUser.tokenBalance.toFixed(1) : "-"}
+                                {formatMetricValue(currentUser?.tokenBalance)}
                             </span>
                         </div>
                     </div>
@@ -216,7 +222,7 @@ const TaskComposer = ({
                         <div>
                             <span className="metric-label">Model cost</span>
                             <span className="metric-value">
-                                {currentModel ? currentModel.tokenCost.toFixed(1) : "-"}
+                                {formatMetricValue(currentModel?.tokenCost)}
                             </span>
                         </div>
                     </div>
@@ -238,7 +244,7 @@ const TaskComposer = ({
                         }
                         disabled={
                             !hasAvailableModels ||
-                            !selectedModelId ||
+                            !selectedModel ||
                             submitLoading
                         }
                     />
@@ -255,7 +261,7 @@ const TaskComposer = ({
                     disabled={
                         submitLoading ||
                         !hasAvailableModels ||
-                        !selectedModelId ||
+                        !selectedModel ||
                         !prompt.trim()
                     }
                 >

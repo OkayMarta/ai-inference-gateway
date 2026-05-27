@@ -17,9 +17,12 @@ const useAuth = () => {
     const normalizeCurrentUser = useCallback((me) => {
         const userID = me.id || me.userId || me.ID;
         return {
+            ...me,
             id: userID,
+            username: me.username || me.Username,
             email: me.email || me.Email,
-            role: me.role,
+            role: me.role || me.Role,
+            tokenBalance: me.tokenBalance ?? me.TokenBalance,
         };
     }, []);
 
