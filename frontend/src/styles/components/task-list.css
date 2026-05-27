@@ -130,7 +130,44 @@
 }
 
 .task-filter-select {
+    width: 220px;
     max-width: 240px;
+    min-height: 46px;
+    padding: 10px 42px 10px 14px;
+    border-color: rgba(126, 87, 255, 0.44);
+    border-radius: 12px;
+    appearance: none;
+    background-color: rgba(20, 31, 61, 0.72);
+    background-image:
+        linear-gradient(45deg, transparent 50%, rgba(216, 226, 245, 0.78) 50%),
+        linear-gradient(135deg, rgba(216, 226, 245, 0.78) 50%, transparent 50%);
+    background-position:
+        calc(100% - 18px) 50%,
+        calc(100% - 12px) 50%;
+    background-repeat: no-repeat;
+    background-size: 6px 6px;
+    color: #f8fafc;
+    cursor: pointer;
+    font-size: 0.96rem;
+    font-weight: 700;
+}
+
+.task-filter-select:hover {
+    border-color: rgba(126, 87, 255, 0.72);
+    background-color: rgba(24, 35, 72, 0.9);
+    box-shadow: 0 0 0 3px rgba(126, 87, 255, 0.12);
+}
+
+.task-filter-select:focus,
+.task-filter-select:focus-visible {
+    border-color: rgba(126, 87, 255, 0.72);
+    background-color: rgba(24, 35, 72, 0.9);
+    box-shadow: 0 0 0 3px rgba(126, 87, 255, 0.14);
+}
+
+.task-filter-select option {
+    background: #111827;
+    color: #f8fafc;
 }
 
 
@@ -148,8 +185,8 @@
     .task-summary-item {
         font-size: 0.78rem;
     }
-
     .task-filter-select {
+        width: 100%;
         max-width: none;
     }
 }
