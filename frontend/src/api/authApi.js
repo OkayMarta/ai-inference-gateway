@@ -31,8 +31,8 @@ export const resetPassword = (token, newPassword) =>
         body: JSON.stringify({ token, newPassword }),
     });
 
-export const getMe = () => protectedRequest("/api/auth/me");
+export const getCurrentUser = () => protectedRequest("/api/auth/me");
 
-export const getUsers = async () => [await protectedRequest("/api/auth/me")];
+export const getMe = getCurrentUser;
 
 export const logout = () => clearToken();

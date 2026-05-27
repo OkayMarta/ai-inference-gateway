@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../api/client";
-import { normalizeList } from "../utils/taskUtils";
 
 const getPasswordResetToken = () => {
     return new URLSearchParams(window.location.search).get("token") || "";
@@ -15,10 +14,9 @@ const useAuth = () => {
     const [authError, setAuthError] = useState("");
     const [authSuccess, setAuthSuccess] = useState("");
 
-    const hydrateCurrentUser = useCallback(async (me) => {
+    const normalizeCurrentUser = useCallback((me) => {
         const userID = me.id || me.userId || me.ID;
-        const users = normalizeList(await api.getUsers());
-        return users.find((user) => user.id === userID) || {
+        return {
             id: userID,
             email: me.email || me.Email,
             role: me.role,
@@ -42,8 +40,8 @@ const useAuth = () => {
             }
 
             try {
-                const me = await api.getMe();
-                const user = await hydrateCurrentUser(me);
+                const me = await api.getCurrentUser();
+                const user = normalizeCurrentUser(me);
 
                 if (!active) {
                     return;
@@ -70,7 +68,7 @@ const useAuth = () => {
         return () => {
             active = false;
         };
-    }, [hydrateCurrentUser, passwordResetToken]);
+    }, [normalizeCurrentUser, passwordResetToken]);
 
     const completeAuth = useCallback(
         async (authAction) => {
@@ -80,8 +78,8 @@ const useAuth = () => {
 
             try {
                 await authAction();
-                const me = await api.getMe();
-                const user = await hydrateCurrentUser(me);
+                const me = await api.getCurrentUser();
+                const user = normalizeCurrentUser(me);
                 setAuthUser(me);
                 setCurrentUser(user);
                 setLandingStarted(true);
@@ -92,7 +90,7 @@ const useAuth = () => {
                 setAuthLoading(false);
             }
         },
-        [hydrateCurrentUser],
+        [normalizeCurrentUser],
     );
 
     const login = useCallback(

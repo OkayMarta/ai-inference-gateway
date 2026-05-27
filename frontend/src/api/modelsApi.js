@@ -1,3 +1,3 @@
-import { request } from "./http";
+import { protectedRequest } from "./http";
 
-export const getModels = () => request("/api/models");
+export const getModels = () => protectedRequest("/api/models");

@@ -65,11 +65,8 @@ const useTasksPolling = ({
     useAutoDismiss(balanceAlert, () => setBalanceAlert(""), 4200);
 
     const applyTasksAndUser = useCallback(
-        (nextTasks, nextUsers) => {
+        (nextTasks, refreshedUser) => {
             setTasks(normalizeList(nextTasks));
-            const refreshedUser = normalizeList(nextUsers).find(
-                (user) => user.id === currentUserId,
-            );
             if (refreshedUser) {
                 setCurrentUser((previousUser) =>
                     sameUserSnapshot(previousUser, refreshedUser)
@@ -78,7 +75,7 @@ const useTasksPolling = ({
                 );
             }
         },
-        [currentUserId, setCurrentUser],
+        [setCurrentUser],
     );
 
     const loadTasksAndUser = useCallback(
@@ -91,7 +88,7 @@ const useTasksPolling = ({
                     offset: 0,
                     sort: "created_at_desc",
                 }),
-                api.getUsers(),
+                api.getCurrentUser(),
             ]),
         [currentUserId, statusFilter],
     );
@@ -112,13 +109,13 @@ const useTasksPolling = ({
             setScreenError("");
 
             try {
-                const [nextTasks, nextUsers] = await loadTasksAndUser();
+                const [nextTasks, refreshedUser] = await loadTasksAndUser();
 
                 if (!active) {
                     return;
                 }
 
-                applyTasksAndUser(nextTasks, nextUsers);
+                applyTasksAndUser(nextTasks, refreshedUser);
             } catch (error) {
                 if (active) {
                     setScreenError(error.message);
@@ -163,9 +160,9 @@ const useTasksPolling = ({
         try {
             await api.submitTask(selectedModelId, prompt.trim());
 
-            const [nextTasks, nextUsers] = await loadTasksAndUser();
+            const [nextTasks, refreshedUser] = await loadTasksAndUser();
 
-            applyTasksAndUser(nextTasks, nextUsers);
+            applyTasksAndUser(nextTasks, refreshedUser);
             setPrompt("");
             setSubmitSuccess("Task submitted.");
         } catch (error) {
@@ -185,9 +182,9 @@ const useTasksPolling = ({
             setCancelLoadingTaskId(taskId);
             await api.deleteTask(taskId);
 
-            const [nextTasks, nextUsers] = await loadTasksAndUser();
+            const [nextTasks, refreshedUser] = await loadTasksAndUser();
 
-            applyTasksAndUser(nextTasks, nextUsers);
+            applyTasksAndUser(nextTasks, refreshedUser);
         } catch (error) {
             console.error(error);
             window.alert(`Error: ${error.message}`);
